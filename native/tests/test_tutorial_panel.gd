@@ -30,7 +30,8 @@ func _run() -> void:
 	var count_before: int = panel.get_child_count()
 	panel.configure()
 	_check(panel.get_child_count() == count_before, "Repeated configure does not duplicate guide geometry")
-	_check(is_equal_approx(panel.WIDTH_M, 0.72) and is_equal_approx(panel.HEIGHT_M, 0.48), "Guide uses independent 0.72 by 0.48 metre layout")
+	_check(is_equal_approx(panel.WIDTH_M, 0.94) and is_equal_approx(panel.HEIGHT_M, 0.66), "Guide uses enlarged 0.94 by 0.66 metre layout")
+	_test_readability_metrics(panel)
 	var tutorial = TutorialScript.new("")
 	tutorial.start({})
 	for index in range(tutorial.steps.size()):
@@ -70,7 +71,7 @@ func _run() -> void:
 	quit(0 if failures == 0 else 1)
 
 func _bottom(label: Label3D) -> float:
-	return label.position.y - ThemeDB.fallback_font.get_height(label.font_size) * label.pixel_size * label.text.split("\n").size()
+	return label.position.y if label.text.is_empty() else label.position.y - ThemeDB.fallback_font.get_height(label.font_size) * label.pixel_size * label.text.split("\n").size()
 
 func _test_page(panel, view: Dictionary) -> void:
 	var context: String = str(view.id)
@@ -79,7 +80,7 @@ func _test_page(panel, view: Dictionary) -> void:
 	_check(panel.labels.theory.text.replace("\n", " ") == view.theory, context + " retains full theory")
 	_check(panel.labels.progress.text == view.progress and panel.labels.chapter.text == view.chapter, context + " identifies progress and chapter")
 	_check(_bottom(panel.labels.chapter) > panel.labels.title.position.y + 0.003, context + " chapter clears title")
-	_check(_bottom(panel.labels.title) > 0.151, context + " title clears progress bar")
+	_check(_bottom(panel.labels.title) > 0.220, context + " title clears progress bar")
 	_check(_bottom(panel.labels.task_heading) > panel.labels.task.position.y + 0.002, context + " instruction heading clears body")
 	_check(_bottom(panel.labels.task) > panel.labels.theory_heading.position.y + 0.003, context + " instruction clears theory heading")
 	_check(_bottom(panel.labels.theory_heading) > panel.labels.theory.position.y + 0.002, context + " theory heading clears body")
@@ -87,13 +88,36 @@ func _test_page(panel, view: Dictionary) -> void:
 	_check(_bottom(panel.labels.hint) > panel.labels.legend.position.y + 0.003, context + " hint clears controller legend")
 	_check(_bottom(panel.labels.legend) > panel.labels.movement.position.y + 0.003, context + " controller legend clears movement legend")
 	_check(_bottom(panel.labels.movement) > panel.labels.footer.position.y + 0.003, context + " movement legend clears footer")
-	for key in ["chapter", "progress", "title", "task", "theory", "hint", "legend", "movement", "footer"]:
+	for key in ["chapter", "progress", "title", "task_heading", "task", "theory_heading", "theory", "hint", "legend", "movement", "footer"]:
 		var label: Label3D = panel.labels[key]
+		_check(label.font_size * label.pixel_size >= 0.016, context + " " + key + " never uses tiny secondary text")
 		_check(_bottom(label) >= -panel.HEIGHT_M / 2.0 + 0.010, context + " " + key + " stays above backplate edge")
 		for line in label.text.split("\n"):
 			var width: float = ThemeDB.fallback_font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x * label.pixel_size
 			_check(width <= panel.TEXT_WIDTH_M + 0.001, context + " " + key + " line fits text region")
-	_check(panel.labels.task.text.split("\n").size() <= 3 and panel.labels.theory.text.split("\n").size() <= 3, context + " uses at most three lines per instruction/theory")
+	_check(panel.labels.task.text.split("\n").size() <= 4 and panel.labels.theory.text.split("\n").size() <= 4, context + " retains complete copy in at most four large lines per block")
+
+func _test_readability_metrics(panel) -> void:
+	var metrics: Dictionary = panel.readability_metrics(1.47)
+	_check(is_equal_approx(metrics.task_em_m, 0.0228) and is_equal_approx(metrics.theory_em_m, 0.0228), "Task and theory share 22.8 mm nominal world em")
+	_check(metrics.task_em_m / metrics.previous_task_em_m >= 1.55, "Task typography grows at least55% independently of card size")
+	_check(metrics.theory_em_m / metrics.previous_theory_em_m >= 1.69, "Theory typography grows at least69% independently of card size")
+	_check(metrics.task_em_deg >= 0.88 and metrics.task_em_deg < 0.90, "At1.47m nominal text em spans about0.889degrees")
+	_check(metrics.task_line_height_m > metrics.task_em_m, "Metrics distinguish actual font line height from nominal em")
+	_check(panel.labels.task.modulate == panel.labels.theory.modulate, "Theory has the same bright contrast as the main instruction")
+	var four_lines: float = ThemeDB.fallback_font.get_height(panel.BODY_FONT_SIZE) * panel.BODY_PIXEL_SIZE * 4.0
+	_check(panel.labels.task.position.y - four_lines > panel.labels.theory_heading.position.y + 0.003, "Instruction reserves four full large-font line heights without overlap")
+	_check(panel.labels.theory.position.y - four_lines > panel.labels.hint.position.y + 0.003, "Theory reserves four full large-font line heights without overlap")
+	_check(metrics.card_horizontal_deg > 35.0 and metrics.card_horizontal_deg < 36.0, "At1.47m entire card spans about35.5horizontaldegrees")
+	_check(metrics.card_vertical_deg > 25.0 and metrics.card_vertical_deg < 26.0, "At1.47m entire card spans about25.3verticaldegrees")
+	var close: Dictionary = panel.readability_metrics(1.10)
+	_check(close.task_em_deg > 1.18 and close.task_em_deg < 1.20, "At1.10m nominal text em spans about1.188degrees")
+	var bounds: Dictionary = panel.view_bounds(1.15, -20.0, 8.0)
+	_check(bounds.left_deg > -45.0 and bounds.right_deg < 10.0, "Suggested placement fits an explicit -45to+10degree horizontal viewing region")
+	_check(bounds.bottom_deg > -20.0 and bounds.top_deg < 30.0, "Suggested placement fits an explicit -20to+30degree vertical viewing region")
+	_check(is_zero_approx(panel.angular_extent(0.02, 0.0)), "Invalid viewing distance cannot produce an angular-size claim")
+	print("GUIDE_READABILITY ", JSON.stringify(metrics))
+	print("GUIDE_SUGGESTED_CORNER_BOUNDS ", JSON.stringify(bounds))
 
 func _render_comparison() -> void:
 	if DisplayServer.get_name() == "headless":
@@ -111,14 +135,14 @@ func _render_comparison() -> void:
 	camera.position = Vector3(0, 0, 2)
 	camera.look_at(Vector3.ZERO)
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 1.25
+	camera.size = 1.60
 	camera.current = true
 	var tutorial = TutorialScript.new("")
 	tutorial.start({})
 	for index in range(2):
 		var panel = PanelScript.new()
 		root.add_child(panel)
-		panel.position.x = -0.40 if index == 0 else 0.40
+		panel.position.x = -0.51 if index == 0 else 0.51
 		panel.configure()
 		tutorial.index = 0 if index == 0 else 12
 		panel.update_view(tutorial.view({}))

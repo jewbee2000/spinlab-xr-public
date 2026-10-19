@@ -1,8 +1,8 @@
 # SpinLab XR — demonstration and recording guide
 
-This guide provides a repeatable demonstration of the native version 0.5 reaction-wheel balancing lab: its physical console, rear analyzer, four-tab menu, floating guide, measured trial-mass correction, and diagnosis. All instrument data are synthetic. Use [APK_SETUP.md](APK_SETUP.md) for installation and controls, [UX_DESIGN.md](UX_DESIGN.md) for workspace/movement, [TUTORIAL.md](TUTORIAL.md) for lessons, [NATIVE_RESEARCH.md](NATIVE_RESEARCH.md) for analytical assumptions, and [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md) for the current test record.
+This guide provides a repeatable demonstration of the native version 0.5.1 reaction-wheel balancing lab: its physical console, lower side analyzer, four-tab menu, floating guide, measured trial-mass correction, and diagnosis. All instrument data are synthetic. Use [APK_SETUP.md](APK_SETUP.md) for installation and controls, [UX_DESIGN.md](UX_DESIGN.md) for workspace/movement, [TUTORIAL.md](TUTORIAL.md) for lessons, [NATIVE_RESEARCH.md](NATIVE_RESEARCH.md) for analytical assumptions, and [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md) for the current test record.
 
-Earlier headset observations establish the visible lab, controller interactions, and spinning rotor. Feedback informed the new workspace and input changes. Version 0.5 requires its own hardware acceptance for console reach, analyzer sightlines, fingertip contact, menu/controller mode, guide readability, movement, and sustained performance. Identify each capture by its actual installed build.
+Earlier headset observations establish the visible lab, controller interactions, and spinning rotor. Feedback informed the new workspace and input changes. Version 0.5.1 requires its own hardware acceptance for console reach, analyzer sightlines, fingertip contact, menu/controller mode, guide readability, movement, and sustained performance. Identify each capture by its actual installed build.
 
 ## Prepare the session
 
@@ -70,7 +70,7 @@ Keep test speed, probe position, and acquisition conditions consistent across ba
 
 | Shot | Content | Explanation |
 | --- | --- | --- |
-| Station overview | Workbench, rotor tray, guard, probe, physical console, and rear analyzer with menu closed. | A guarded workflow with a defined measurement task. |
+| Station overview | Workbench, rotor tray, guard, probe, physical console, and lower side analyzer with menu closed. | A guarded workflow with a defined measurement task. |
 | Guide orientation | Separate DO THIS/WHY card, current task, and manual A/X navigation. | Guidance refers to real controls and accepted outcomes without autoplaying the lab. |
 | Menu transition | B/Y, controller representations/rays, selected tab, trigger selection, and return to gloves. | Pointing menus and nearby physical operation use distinct input modes. |
 | Direct controls | Fingertip press, nearby grip, rotor seating, and dial movement. | Controller-driven gloves and constrained interaction. |

@@ -32,7 +32,7 @@ if(-not $SkipTests){
   if($LASTEXITCODE -ne 0){throw 'Native science tests failed.'}
   & $taskGodot --headless --xr-mode off --path (Join-Path $taskRoot 'native') --script res://tests/test_app.gd
   if($LASTEXITCODE -ne 0){throw 'Native app workflow tests failed.'}
-  foreach($taskTest in @('test_direct_interaction.gd','test_hand_visual.gd','test_hands_app.gd','test_tutorial.gd','test_tutorial_panel.gd','test_tutorial_app.gd','test_navigation.gd','test_workcell_geometry.gd','test_operator_ui.gd')){
+  foreach($taskTest in @('test_direct_interaction.gd','test_hand_visual.gd','test_hands_app.gd','test_tutorial.gd','test_tutorial_panel.gd','test_tutorial_app.gd','test_navigation.gd','test_workcell_geometry.gd','test_operator_ui.gd','test_controller_pose.gd')){
     & $taskGodot --headless --xr-mode off --path (Join-Path $taskRoot 'native') --script "res://tests/$taskTest"
     if($LASTEXITCODE -ne 0){throw "Native direct-hand tests failed: $taskTest"}
   }
@@ -40,9 +40,9 @@ if(-not $SkipTests){
 $taskEngine=$taskGodot.Replace('_console.exe','.exe')
 $taskStdout=Join-Path $taskRoot '.local\native-export.stdout.log'
 $taskStderr=Join-Path $taskRoot '.local\native-export.stderr.log'
-$taskArguments='--headless --xr-mode off --path "'+(Join-Path $taskRoot 'native')+'" --export-debug "Quest 2" "'+(Join-Path $taskRoot 'artifacts\SpinLabXR-v0.5.0.apk')+'" --quit'
+$taskArguments='--headless --xr-mode off --path "'+(Join-Path $taskRoot 'native')+'" --export-debug "Quest 2" "'+(Join-Path $taskRoot 'artifacts\SpinLabXR-v0.5.1.apk')+'" --quit'
 $taskExport=Start-Process -FilePath $taskEngine -WindowStyle Hidden -ArgumentList $taskArguments -RedirectStandardOutput $taskStdout -RedirectStandardError $taskStderr -Wait -PassThru
 Get-Content -LiteralPath $taskStdout
 Get-Content -LiteralPath $taskStderr
 if($taskExport.ExitCode -ne 0){throw 'APK export failed. Check Godot and Gradle diagnostics above.'}
-Get-FileHash -LiteralPath (Join-Path $taskRoot 'artifacts\SpinLabXR-v0.5.0.apk') -Algorithm SHA256
+Get-FileHash -LiteralPath (Join-Path $taskRoot 'artifacts\SpinLabXR-v0.5.1.apk') -Algorithm SHA256

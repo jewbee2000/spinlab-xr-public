@@ -1,8 +1,8 @@
 # Floating guide: operation and engineering methods
 
-Version 0.5 presents a **read-only floating guide**, separate from the four-tab menu and the physical station console. Its 23 short lessons pair one task with relevant theory. All instrument data remain synthetic; guide completion is navigation history, not operator qualification.
+Version 0.5.1 presents a **read-only floating guide**, separate from the four-tab menu and the physical station console. Its 23 short lessons pair one task with relevant theory. All instrument data remain synthetic; guide completion is navigation history, not operator qualification.
 
-Physical Quest 2 acceptance of this interface remains pending. Earlier launch/button/spin smoke tests do not establish this revision's guide placement, controller transitions, walking comfort, text readability, or learning effectiveness.
+Quest 2 feedback on version 0.5 found the guide too small and difficult to read. The readability revision increases the text itself, gives instruction and theory equal bright contrast, and removes the small decorative footer. Physical acceptance of the enlarged guide remains pending; earlier launch/button/spin checks do not establish its placement, readability, or comfort.
 
 ## Controls and input modes
 
@@ -86,8 +86,24 @@ The sweep evaluates quasi-steady synthetic windows around an illustrative 22 Hz 
 
 `lab_tutorial.gd` is a separate `RefCounted` state controller. It reads snapshots and accepted action outcomes without holding or operating the laboratory model. Its public API retains `start`, `observe`, `view`, `next`, `back`, `skip_step`, `skip`, `set_startup`, and `should_autostart`. Practical gates inspect actual state, accepted captures, and confirmed saves. Input practice accepts validated menu selection or optional physical contact separately from operation acceptance, and requires menu closure.
 
-`tutorial_panel.gd` renders the floating 0.72 × 0.48 m guide. Its instruction and theory are each at most 200 characters and three displayed lines. It has no colliders, touch controls, ray targets, or input dispatch. Root application code owns guide placement and controller/keyboard navigation. Showing or hiding the panel cannot operate the laboratory.
+`tutorial_panel.gd` renders a floating **0.94 × 0.66 m** guide with a 0.86 m text region. Its unchanged instruction and theory are each at most 200 characters, with space reserved for four large lines per block. It has no colliders, touch controls, ray targets, or input dispatch. Root application code owns guide placement and controller/keyboard navigation. Showing or hiding the panel cannot operate the laboratory.
+
+## Readability dimensions and geometric checks
+
+The revision increases world-space typography rather than adding empty card area. Instruction and theory both use a nominal 22.8 mm em; their font line height is 31.92 mm. Every visible secondary label uses at least a 17.16 mm nominal em. The guide retains the same 23 lessons and controller navigation.
+
+| Measure | Previous guide | Enlarged guide |
+| --- | --- | --- |
+| Instruction nominal em | 14.50 mm | 22.80 mm, **57% larger** |
+| Theory nominal em | 13.44 mm | 22.80 mm, **70% larger** |
+| Instruction angular em at 1.47 m | 0.565° | 0.889° |
+| Theory angular em at 1.47 m | 0.524° | 0.889° |
+| Whole card, facing viewer at 1.47 m | — | 35.46° horizontal × 25.31° vertical |
+
+Nominal em is `font_size × pixel_size`; it is not a measured glyph-ink height. Font line height includes ascent/descent spacing. Angular extents use `2 × atan(span / (2 × distance))`. These geometric specifications describe size, not headset acuity or a measured readability result. Moving the guide closer increases angular text size further; at the current approximately 1.16 m range, nominal instruction/theory em is about 1.125°.
+
+Placement must account for the entire card, not just its center. As an explicit geometry example, a viewer-facing card at 1.15 m, 20° left azimuth, and 8° upward elevation has corner bounds of approximately **−43.27° to +3.27° horizontally** and **−7.45° to +22.26° vertically**. This is a projection check, not a Quest field-of-view guarantee. The current app uses a right-side placement search to clear opaque hardware; its tested default positions are 48–60° right at about 1.16 m. See [UX_DESIGN.md](UX_DESIGN.md) for the actual pose/sightline checks. The application still needs physical verification that the guide stays readable, avoids the monitor sightline, and requires a comfortable head turn.
 
 `ConfigFile` stores only startup preference and completion history in `user://tutorial.cfg`. An empty path is memory-only for tests. Missing preferences use defaults; malformed/unwritable settings report an error without preventing laboratory use. Settings are written on explicit preference changes or completion, not merely on launch.
 
-Automated checks cover all lesson text/layout, state gates, contact routing, the measured workflow, pause/resume, menu isolation, controller/keyboard navigation, reports, rejected reset preservation, and preference reload. They do not establish physical controller alignment, comfort, readability, or sustained headset frame pacing. Follow the pending acceptance matrix in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md), installation in [APK_SETUP.md](APK_SETUP.md), and interaction design in [DIRECT_INTERACTION_DESIGN.md](DIRECT_INTERACTION_DESIGN.md).
+Automated checks cover every lesson's complete text, large-font wrapping, four-line reserves, nonoverlapping blocks, minimum visible em, world/angular size calculations, and projected corner bounds. Additional suites cover state gates, contact routing, the measured workflow, pause/resume, menu isolation, controller/keyboard navigation, reports, rejected reset preservation, and preference reload. A rendered guide comparison provides visual layout QA. These checks do not establish physical controller alignment, comfort, readability, or sustained headset frame pacing. Follow the pending acceptance matrix in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md), installation in [APK_SETUP.md](APK_SETUP.md), and interaction design in [DIRECT_INTERACTION_DESIGN.md](DIRECT_INTERACTION_DESIGN.md).
