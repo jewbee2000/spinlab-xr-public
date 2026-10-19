@@ -323,7 +323,10 @@ func _action(command: String, input_kind: String="") -> void:
 		"coach":coach=not coach;result.message="Guided coach enabled" if coach else "Expert mode: use measured amplitude and phase."
 		"sound":sound_on=not sound_on;result.message="Motor sonification enabled" if sound_on else "Motor sonification muted"
 		"save":_save_report();return
-		"new":_cancel_hand_interactions();result=model.reset();active_plane=0;geometry.guard_preview=-1.0;saved_path=""
+		"new":
+			result=model.reset()
+			if result.ok:
+				_cancel_hand_interactions();active_plane=0;geometry.guard_preview=-1.0;saved_path=""
 		"lower":_cancel_hand_interactions();station.position.y=clampf(station.position.y-0.1,-0.5,0.3);result.message="Station lowered."
 		"raise":_cancel_hand_interactions();station.position.y=clampf(station.position.y+0.1,-0.5,0.3);result.message="Station raised."
 		"distance":_cancel_hand_interactions();station_distance=0.82 if station_distance<0.70 and station_distance>0.60 else 0.45 if station_distance>0.70 else 0.65;station.position.z=station_distance;result.message="Bench reach adjusted. Withdraw your hand before the next press."

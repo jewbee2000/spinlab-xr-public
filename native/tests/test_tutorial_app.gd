@@ -97,6 +97,13 @@ func _run() -> void:
 	_check(FileAccess.file_exists(app.saved_path),"Report lesson writes an actual file")
 	var report=JSON.parse_string(FileAccess.get_file_as_string(app.saved_path))
 	_check(report is Dictionary and report.has("tutorial") and report.tutorial.step_id=="report","Saved report includes separate tutorial context")
+	var preserved_path: String=app.saved_path
+	var preserved_records: int=app.model.records.size()
+	app.active_plane=1;app.model.processing=true
+	app._action("new")
+	_check(app.active_plane==1 and app.saved_path==preserved_path,"Rejected New Session preserves active-plane selection and saved-report reference")
+	_check(app.model.records.size()==preserved_records and app.tutorial.view(app._tutorial_context()).ready,"Rejected New Session preserves records and successful-save evidence")
+	app.model.processing=false;app.active_plane=0
 	DirAccess.remove_absolute(app.saved_path)
 	_next("session");_next("finish")
 	var lab_snapshot=JSON.stringify(app.model.report())
