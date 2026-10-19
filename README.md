@@ -2,13 +2,13 @@
 
 An interactive reaction-wheel balancing and commissioning laboratory for **Meta Quest 2**, built by Walter Teitelbaum. Practice fixture setup, vibration measurement, trial-mass calibration, correction, and verification using synthetic training data.
 
-**Version 0.5.1 separates hands-on operation from pointer-based command controls.** The normal workspace has visible controller-driven gloves, nearby handles and dials, optional physical command caps, and a lower analyzer to the left of the guard, angled toward the operator. B/Y opens a four-tab menu with controller models and pointing rays; B/Y closes it and restores the gloves. A separate floating guide explains 23 short DO THIS/WHY lessons, with A to continue and X to go back. Use the [installation guide](docs/APK_SETUP.md), [workspace and movement design](docs/UX_DESIGN.md), [tutorial guide](docs/TUTORIAL.md), [interaction design](docs/DIRECT_INTERACTION_DESIGN.md), [scientific methodology](docs/NATIVE_RESEARCH.md), and [validation record](docs/NATIVE_VALIDATION.md). Source is in `native/`; build with Godot 4.7.2/OpenXR. The browser version below provides a separate desktop and WebXR preview.
+**Version 0.5.2 separates hands-on operation from pointer-based command controls.** The normal workspace has visible controller-driven gloves, nearby handles and dials, optional physical command caps, and a lower analyzer to the left of the guard, angled toward the operator. B/Y opens a four-tab menu with controller models and pointing rays; B/Y closes it and restores the gloves. A separate floating guide explains 23 short DO THIS/WHY lessons, with A to continue and X to go back. Use the [installation guide](docs/APK_SETUP.md), [workspace and movement design](docs/UX_DESIGN.md), [tutorial guide](docs/TUTORIAL.md), [interaction design](docs/DIRECT_INTERACTION_DESIGN.md), [scientific methodology](docs/NATIVE_RESEARCH.md), and [validation record](docs/NATIVE_VALIDATION.md). Source is in `native/`; build with Godot 4.7.2/OpenXR. The browser version below provides a separate desktop and WebXR preview.
 
-Controller lettering follows the corrected grip-frame orientation. The floating guide uses larger, equally bright instruction and theory text.
+In glove mode, a viewer-facing guide beside each hand identifies its controller buttons and functions: left Y Menu / X Guide back, right B Menu / A Guide next, plus stick, grip, and trigger controls. Controller lettering follows the corrected grip-frame orientation. The floating guide uses larger, equally bright instruction and theory text.
 
 The control menu starts hidden. The guide starts when its startup preference is enabled and sits beside the work area. It never operates or resets the fixture. Practical lessons wait for the required accepted state and advance only when you press A. In the Session menu, pause/resume preserves the page; restart, skip lesson, and startup preference are separate controls. New Session is in Operate.
 
-![Version 0.5.1 operator workspace in a wide desktop QA perspective](docs/images/operator-workspace.png)
+![Operator workspace in a wide desktop QA perspective](docs/images/operator-workspace.png)
 
 The scientific lab measures a baseline and independent trial masses, solves single- or two-plane complex influence coefficients, then verifies a newly installed correction. It synthesizes sampled tach-referenced vibration, fits DC/1×/2× by least squares, displays a 0–100 Hz DFT and resonance sweep, estimates three-window Type A repeatability, and exports scientific JSON records. Numerical analysis runs in isolated workers. No web server or network connection is required after installation.
 
@@ -24,7 +24,7 @@ Use the B/Y menu and controller pointers for command buttons. Physical caps are 
 
 Fresh Windows build setup: `tools/Setup-NativeToolchain.ps1` downloads pinned Godot/plugin/Android versions plus JDK 17, configures Godot's Android paths, and prepares a local development signing key. Toolchain downloads are large. Keep `.local/spinlab-debug.keystore` for compatible future updates; it is excluded from Git. The APK is a signed development build. Physical headset evidence is recorded separately from software checks.
 
-The v0.5.1 build output is `artifacts/SpinLabXR-v0.5.1.apk`. Download packaged builds from [Releases](https://github.com/jewbee2000/spinlab-xr-public/releases) and retain the installed version/hash with feedback. Headset feedback confirms the hidden-menu transition, pointing, and trigger selection in v0.5. The revised controller graphics, enlarged guide, and lower side analyzer in v0.5.1 need a fresh headset check; movement comfort, report retrieval, and sustained performance also remain pending. See the validation record for exact build/install evidence.
+The v0.5.2 build output is `artifacts/SpinLabXR-v0.5.2.apk`. Download packaged builds from [Releases](https://github.com/jewbee2000/spinlab-xr-public/releases) and retain the installed version/hash with feedback. Headset feedback confirms the hidden-menu transition, pointing, and trigger selection in v0.5. The hand button guides, controller graphics, enlarged tutorial, and lower side analyzer in v0.5.2 need a fresh headset check; movement comfort, report retrieval, and sustained performance also remain pending. See the validation record for exact build/install evidence.
 
 ![Original simulated glove designs, open and gripping poses in desktop QA](docs/images/virtual-gloves.png)
 
@@ -46,7 +46,7 @@ node tools/serve.mjs
 
 Open **http://localhost:8080** on the computer for the desktop preview. For the physical Quest 2, follow [the installation guide](docs/INSTALL_QUEST2.md): enable developer USB debugging, connect a data cable, run `adb reverse tcp:8080 tcp:8080`, open **http://localhost:8080 in Quest Browser**, then select **Enter VR**. Rendering runs on the headset; the computer serves files. Keep the cable and server connected for reloads.
 
-These browser instructions apply to version 0.1. For the standalone version 0.5.1 APK, use the native guide above. Physical acceptance is recorded in the native validation document.
+These browser instructions apply to version 0.1. For the standalone version 0.5.2 APK, use the native guide above. Physical acceptance is recorded in the native validation document.
 
 ## Browser guided exercise
 

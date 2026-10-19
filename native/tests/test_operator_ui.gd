@@ -92,6 +92,7 @@ func _run() -> void:
 	_test_navigation_interruptions()
 	_test_height_and_room()
 	_test_anchor_recovery()
+	_test_hand_control_guides()
 	print("OPERATOR UI TESTS: %d checks, %d failures" % [checks, failures])
 	app._cancel_hand_interactions()
 	app.controllers.clear()
@@ -546,3 +547,66 @@ func _test_anchor_recovery() -> void:
 	app._set_xr_focus(true)
 	app._process(DT)
 	_check(not app.guide_anchor_pending and app.tutorial_panel.global_position.distance_to(app.camera.global_position)<1.6,"Focus return anchors guidance around the current head pose")
+
+func _test_hand_control_guides() -> void:
+	_fresh()
+	left.grip_node.global_position=Vector3(-0.15,1.25,-0.30)
+	right.grip_node.global_position=Vector3(0.55,1.25,-0.30)
+	app._update_controllers(DT)
+	app._refresh_tutorial()
+	_check(_hand_legend_text(right).contains("off"),"Inactive tutorial marks the right-hand guide action off")
+	app.tutorial.start(app._tutorial_context())
+	app.tutorial.index=1
+	app._refresh_tutorial()
+	_check(_hand_legend_text(right).contains("wait"),"Unmet tutorial objective marks Guide next as waiting")
+	for entry in [left,right]:
+		_check(entry.hand.visible and entry.control_guide.visible,"Tracked hands show a button/function guide beside each glove")
+		_check(entry.control_guide.get_parent()==entry.grip_node,"Guide lifetime and artificial movement follow its tracked grip")
+		_check(entry.control_guide.find_children("*","CollisionObject3D",true,false).is_empty(),"Hand legend cannot intercept physical or menu input")
+	var hand_before: Vector3=right.grip_node.global_position
+	var guide_before: Vector3=right.control_guide.global_position
+	right.grip_node.global_position+=Vector3(0.06,0.04,0)
+	app._update_controllers(DT)
+	_check(right.control_guide.global_position.distance_to(guide_before)>0.02,"Legend follows hand translation rather than becoming a floating station card")
+	_check(right.grip_node.global_position.distance_to(hand_before)>0.05,"Legend update does not change the tracked hand pose")
+	app._set_menu_open(true)
+	_check(not left.control_guide.visible and not right.control_guide.visible,"Opening pointer menu immediately hides both hand legends")
+	app._set_menu_open(false)
+	_check(left.control_guide.visible and right.control_guide.visible,"Closing menu restores both nearby tracked hand legends")
+	right.grip_node.tracking=false
+	app._update_controllers(DT)
+	_check(left.control_guide.visible and not right.control_guide.visible,"Lost grip tracking hides only that hand legend")
+	right.grip_node.tracking=true
+	right.node.tracking=false
+	app._update_controllers(DT)
+	_check(right.control_guide.visible,"Hands legend depends on grip tracking and does not require menu aim tracking")
+	app._set_xr_focus(false)
+	_check(not left.control_guide.visible and not right.control_guide.visible,"Focus loss immediately hides both hand legends")
+	app._set_xr_focus(true)
+	app._update_controllers(DT)
+	_check(left.control_guide.visible and right.control_guide.visible,"Focused tracked hands restore their legends")
+	app.head_tracking_override=false
+	app._update_controllers(DT)
+	_check(not left.control_guide.visible and not right.control_guide.visible,"Invalid headset pose cannot leave misleading viewer-facing legends")
+	app.head_tracking_override=true
+	app._update_controllers(DT)
+	_check(left.control_guide.visible and right.control_guide.visible,"Legends recover after valid head tracking returns")
+	var target: Vector3=app.geometry.probe_grab.global_position
+	right.grip_node.global_position=target
+	_check(app._begin_near_grab(right,target),"Legend context test acquires an actual nearby mechanism")
+	app._refresh_tutorial()
+	_check(left.control_guide.labels.stick.text.contains("held"),"Holding with right hand marks left-stick height suspended")
+	_check(not left.control_guide.labels.grip.text.contains("Release"),"Free hand never shows the other hand's release instruction")
+	_check(right.control_guide.labels.grip.text.contains("Release"),"Holding hand explains release to let go")
+	app._release_near_grab(right,true)
+	left.grip_node.global_position=target
+	_check(app._begin_near_grab(left,target),"Other hand acquires mechanism for opposite stick context")
+	app._refresh_tutorial()
+	_check(right.control_guide.labels.stick.text.contains("held"),"Holding with left hand marks right-stick walking suspended")
+	app._release_near_grab(left,true)
+
+
+func _hand_legend_text(entry:Dictionary) -> String:
+	var text: String=""
+	for label in entry.control_guide.find_children("*","Label3D",true,false):text+=label.text+" "
+	return text

@@ -9,8 +9,9 @@ const DirectContact = preload("res://scripts/direct_interaction.gd")
 const Tutorial = preload("res://scripts/lab_tutorial.gd")
 const LessonPanel = preload("res://scripts/tutorial_panel.gd")
 const ControllerVisual = preload("res://scripts/virtual_controller.gd")
+const HandGuide = preload("res://scripts/hand_control_guide.gd")
 const Navigation = preload("res://scripts/operator_navigation.gd")
-const APP_VERSION = "0.5.1"
+const APP_VERSION = "0.5.2"
 const TEAL = Color("6ce5c9")
 const INK = Color("e6f1f5")
 const DIM = Color("9db7c6")
@@ -274,6 +275,7 @@ func _set_menu_open(open: bool) -> void:
 		entry.trigger_armed=false
 		entry.hand.visible=entry.tracked and not open
 		entry.controller_visual.visible=entry.tracked and open
+		_update_hand_guide(entry)
 		if is_instance_valid(entry.beam):entry.beam.visible=false
 	if open:_place_menu()
 	_sync_menu_visibility();_update_ui()
@@ -477,6 +479,7 @@ func _tutorial_context() -> Dictionary:
 func _refresh_tutorial() -> void:
 	if tutorial==null or not is_instance_valid(tutorial_panel):return
 	var view=tutorial.view(_tutorial_context())
+	for entry in controllers:entry.control_guide.set_context(tutorial.active,bool(view.ready),int(view.index)==0,walk_enabled,entry.held!="",not grab_owners.is_empty())
 	tutorial_panel.update_view(view)
 	tutorial_panel.set_panel_active(tutorial.active and not menu_open and (not xr_active or _head_tracking_valid()))
 	if view.id!=guide_step_id:
@@ -675,9 +678,13 @@ func _make_hand_entry(controller: Node3D, grip_node: Node3D) -> Dictionary:
 	var side=str(controller.tracker) if controller.get("tracker")!=null else "right_hand"
 	var hand=HandVisual.new();hand.configure(side);grip_node.add_child(hand)
 	var controller_visual=ControllerVisual.new();controller_visual.configure(side);grip_node.add_child(controller_visual);controller_visual.visible=false
+	var control_guide=HandGuide.new();control_guide.configure(side);grip_node.add_child(control_guide)
 	var hint=Label3D.new();hint.font_size=25;hint.pixel_size=0.00065;hint.position=Vector3(0.08,0.04,0.04);hint.modulate=TEAL;hint.outline_size=0;hint.billboard=BaseMaterial3D.BILLBOARD_ENABLED;grip_node.add_child(hint)
 	var reticle=MeshInstance3D.new();var sphere=SphereMesh.new();sphere.radius=0.005;sphere.height=0.010;reticle.mesh=sphere;reticle.material_override=_material(TEAL,true);controller.add_child(reticle);reticle.visible=false
-	return {"node":controller,"grip_node":grip_node,"hand":hand,"controller_visual":controller_visual,"reticle":reticle,"hint":hint,"held":"","held_target":null,"dial":"","raw":0.0,"contacts":{},"near":null,"tracked":false,"aim_tracked":false,"trigger_armed":false,"grip_down":false,"grip_armed":false,"by_started":-1,"by_handled":false,"ray":null,"beam":null}
+	return {"node":controller,"grip_node":grip_node,"hand":hand,"controller_visual":controller_visual,"control_guide":control_guide,"reticle":reticle,"hint":hint,"held":"","held_target":null,"dial":"","raw":0.0,"contacts":{},"near":null,"tracked":false,"aim_tracked":false,"trigger_armed":false,"grip_down":false,"grip_armed":false,"by_started":-1,"by_handled":false,"ray":null,"beam":null}
+
+func _update_hand_guide(entry: Dictionary) -> void:
+	entry.control_guide.update_placement(entry.grip_node.global_position,camera.global_transform,input_focused and entry.get("tracked",false) and not menu_open and _head_tracking_valid())
 
 func _haptic(entry: Dictionary, amplitude: float=0.25) -> void:
 	if xr_active and entry.node is XRController3D:entry.node.trigger_haptic_pulse("haptic",0,amplitude,0.035,0)
@@ -846,6 +853,8 @@ func _on_pose_recentered() -> void:
 
 func _apply_input_focus() -> void:
 	input_focused=app_has_focus and xr_has_focus
+	if not input_focused:
+		for entry in controllers:entry.control_guide.visible=false
 	motion_armed=false;height_armed=false
 	guide_anchor_pending=true
 	_cancel_hand_interactions()
@@ -869,6 +878,7 @@ func _update_controllers(delta: float) -> void:
 		if not aim_tracked:entry.trigger_armed=false
 		entry.hand.visible=tracked and not menu_open
 		entry.controller_visual.visible=tracked and menu_open
+		_update_hand_guide(entry)
 		entry.hint.visible=tracked and not menu_open
 		entry.reticle.visible=false
 		if is_instance_valid(entry.beam):entry.beam.visible=false

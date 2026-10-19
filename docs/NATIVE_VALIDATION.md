@@ -2,6 +2,16 @@
 
 Recorded 18 October 2026. This distinguishes software evidence from physical-headset acceptance.
 
+## Version 0.5.2 hand button guides
+
+Headset feedback identified a discoverability gap: gloves hide the controller lettering, so the operator cannot identify X/Y/A/B in hands mode. Each glove now has a compact viewer-facing button/function legend. Left Y is Menu and X is Guide back; right B is Menu and A is Guide next. Upper/lower button diagrams match the physical face-button order. Secondary controls explain left-stick bench height, right-stick walking, nearby grip holding/release, and index-trigger curl/release to point.
+
+The legends follow hand position without inheriting wrist roll. They hide during menus, grip tracking loss, focus loss, or an invalid head pose; menu aim tracking is not required. Context marks inactive/unready guide navigation and disabled/held-object walking. The displays are read-only and cannot intercept presses or grabs. **6,135 Windows assertions pass across thirteen native suites**, including 86 focused hand-guide checks and 244 operator UI checks. New coverage checks viewer-facing upright text under wrist rotations, near-face distance, complete context text widths, no input colliders, actual menu/focus/head/grip tracking transitions, independence from menu aim tracking, inactive/waiting guide actions, and cross-hand navigation suspension. A rendered preview with both actual gloves shows complete labels; this is desktop layout QA rather than a headset view.
+
+The **v0.5.2/code7 ARM64 APK** builds, passes Android v2 signature verification, and installs successfully on the connected Quest 2 using the retained development key. Package-manager inspection confirms code7/name0.5.2, minimum SDK29 and target35. Its 165 ZIP entries include the new legend script and exclude native tests, nested Android build resources, and private local data. Size: **89,991,365 bytes**. SHA256: `2e8589a4677bcf8aa692e20a4ab36d827c693691ce6a64d7b8bae1b9297ce0e6`.
+
+Physical readability and reach visibility remain pending. Raise each hand and identify upper/lower Y/X and B/A; check that the corresponding action is clear, letters remain upright through wrist turns, guides do not cover the working fingertip/handle, and opening/closing B/Y hides/restores the legends. Check off/wait cues and both sticks' held-object cue. Continue the existing full-lab and sustained performance checks separately.
+
 ## Version 0.5.1 display and controller revision
 
 Headset feedback on v0.5 confirms that B/Y menu switching, pointing, and trigger selection work. The same feedback identifies upside-down controller lettering, a guide that is too small, and an analyzer that is too high. This revision changes display geometry and readability while preserving the working aim-pose and trigger path.
