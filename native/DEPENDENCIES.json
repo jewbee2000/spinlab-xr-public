@@ -1,0 +1,15 @@
+{
+  "godot": "4.7.2-stable",
+  "openxr_vendors": "5.1.0-stable",
+  "jdk_major": 17,
+  "build_jdk": "Temurin 17.0.20.1+1",
+  "android_compile_sdk": 36,
+  "android_target_sdk": 35,
+  "android_min_sdk": 29,
+  "android_build_tools": "36.1.0",
+  "android_ndk": "29.0.14206865",
+  "gradle": "8.11.1",
+  "architectures": ["arm64-v8a"],
+  "runtime_network_required": false,
+  "signing": "private local development keystore; not a store release"
+}

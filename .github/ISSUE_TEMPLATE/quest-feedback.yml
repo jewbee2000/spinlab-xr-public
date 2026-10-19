@@ -1,0 +1,27 @@
+name: Quest 2 hardware feedback
+description: Record a physical headset acceptance test or bug.
+title: '[Quest 2] '
+body:
+  - type: input
+    id: version
+    attributes:
+      label: App commit, Quest OS, and Browser versions
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did, expected, and observed
+      description: Include seated/standing, hand/controller used, and steps to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance checklist results
+      description: VR entry, targeting, dials, baseline, correction, faults, report export, text readability, comfort, and performance method.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Attach the session JSON or optional recording. Exclude unrelated personal/account data.

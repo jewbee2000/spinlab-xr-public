@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b141e">
+  <meta name="description" content="An immersive reaction-wheel balancing and commissioning lab. An independent engineering training demo by Walter Teitelbaum.">
+  <title>SpinLab XR · Reaction wheel commissioning lab</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <canvas id="world" aria-label="Interactive 3D balancing station"></canvas>
+  <header>
+    <a class="brand" href="./"><span class="brand-mark">S<span>↗</span></span><span>SPINLAB<span class="xr"> XR</span><small>ENGINEERING IN ANOTHER DIMENSION</small></span></a>
+    <div class="header-center"><span class="live-dot"></span> REACTION WHEEL LAB <span class="divider">/</span> STATION 01</div>
+    <div class="header-actions"><span class="version">PROTOTYPE 0.1</span><button id="help-button" class="quiet">Controls <kbd>?</kbd></button><button id="enter-vr" class="vr-button">Checking VR…</button></div>
+  </header>
+  <main>
+    <section class="guide glass" aria-label="Training sequence">
+      <div class="eyebrow">COMMISSIONING EXERCISE <span>01 / 03</span></div>
+      <h1>Find the<br><em>balance.</em></h1>
+      <p class="intro">Commission a reaction wheel. Read its vibration signature. Make a precise correction.</p>
+      <ol id="steps">
+        <li data-step="0"><span>01</span><div>Prepare the fixture<small>Load rotor · home probe · close guard</small></div></li>
+        <li data-step="1"><span>02</span><div>Characterize vibration<small>Run the instrumented speed sweep</small></div></li>
+        <li data-step="2"><span>03</span><div>Correct &amp; verify<small>Trim the mass · repeat the measurement</small></div></li>
+      </ol>
+      <div class="instruction"><span class="instruction-label">YOUR NEXT MOVE</span><p id="next-step">Load the rotor into the fixture.</p></div>
+      <button id="exploded-button" class="wide quiet">◇ Explore assembly</button>
+      <div class="guide-footer">SIMULATED HARDWARE <span>6DOF VR READY</span></div>
+    </section>
+    <section class="instrument glass" aria-label="Live vibration instrument">
+      <div class="instrument-heading"><span><i class="live-dot"></i> LIVE INSTRUMENT</span><span id="run-state">STANDBY</span></div>
+      <div class="speed"><strong id="rpm">0</strong><span>RPM<small>ROTOR SPEED</small></span></div>
+      <div class="metrics"><div><span>VIBRATION</span><strong id="vibration">0.00 <small>mm/s</small></strong></div><div><span>RESIDUAL UNBALANCE</span><strong id="residual">18.0 <small>g·mm</small></strong></div></div>
+      <div class="chart-heading"><span>SPEED SWEEP</span><span>Vibration / speed</span></div><canvas id="sweep-chart" width="600" height="220" aria-label="Vibration versus rotor speed chart"></canvas>
+      <div class="polar-row"><canvas id="polar-chart" width="240" height="220" aria-label="Imbalance phase polar diagram"></canvas><div><span>COMPENSATED PHASE</span><strong id="phase">120°</strong><small>Single-plane model<br>Correction radius: 30 mm</small></div></div>
+      <div class="interlocks" id="interlocks"></div>
+      <div id="result" class="result">AWAITING BASELINE SWEEP</div>
+    </section>
+    <div class="scene-label"><span class="tiny-square"></span> RW–01 <span>INDEPENDENT CONCEPT FIXTURE</span></div>
+    <div class="view-tools"><button id="reset-view">↺ Reset view</button><span>Drag to orbit · Scroll to zoom · Click hardware to interact</span></div>
+    <section class="console glass" aria-label="Station controls">
+      <div class="console-top"><div><span class="eyebrow">STATION CONTROL</span><span id="status" role="status" aria-live="polite">Ready. Load rotor to begin.</span></div><span id="fps">DESKTOP PREVIEW</span></div>
+      <div class="actions"><button data-action="mount" id="mount-button">01 &nbsp; Load rotor</button><button data-action="home">02 &nbsp; Home probe</button><button data-action="guard" id="guard-button">03 &nbsp; Close guard</button><button data-action="run" class="primary">▶ Run sweep</button><button data-action="stop">■ Stop</button><button data-action="estop" class="danger">E-STOP</button></div>
+      <div class="adjustments"><label>PROBE <span><output id="probe-value">6.00</output> mm</span><input id="probe" type="range" min="0" max="12" step="0.05" value="6" aria-label="Probe position in millimetres"></label><label>TRIM MASS <span><output id="mass-value">0.000</output> g</span><input id="mass" type="range" min="0" max="1.2" step="0.025" value="0" aria-label="Correction mass in grams"></label><label>TRIM ANGLE <span><output id="angle-value">0</output>°</span><input id="angle" type="range" min="0" max="355" step="5" value="0" aria-label="Correction angle in degrees"></label><div class="utility-actions"><button data-action="fault">Inject sensor fault</button><button data-action="recover">Reset / re-arm</button><button data-action="report">↓ Save report</button><button data-action="reset">New session</button></div></div>
+    </section>
+  </main>
+  <dialog id="help"><button id="close-help" class="dialog-close" aria-label="Close controls">×</button><span class="eyebrow">WELCOME TO SPINLAB XR</span><h2>A small fixture.<br>A complete engineering story.</h2><p>Load a fictional reaction wheel, home its probe, close the guard, and run a 12-second speed sweep. Stop before opening the guard. Fit a trim mass and measure again.</p><div class="help-grid"><div><h3>Quest 2 · Touch controllers</h3><p>Point either ray and press trigger to select. Hold a dial with trigger and rotate your wrist, or move the thumbstick horizontally for fine adjustment. Squeeze over the rotor, guard handle, or probe to operate it. Left stick down while no dial is held lowers the station for seated use. Left stick up raises it.</p></div><div><h3>Desktop preview</h3><p>Drag the scene to orbit; scroll to zoom. Use the sliders and buttons below. All keyboard-focusable controls work with Tab and Enter. Press Esc to close this guide.</p></div></div><p><strong>Guided correction:</strong> the independent model starts at 18 g·mm, 120°. At a 30 mm radius, add <strong>0.600 g at 300°</strong>, close the guard, and repeat the sweep. This is an illustrative model, not a flight qualification tool.</p><p class="help-note">The station resets on reload. Saved reports stay in this browser. Save report exports units, configuration, measurements, and event history as JSON. In VR, it is saved locally; exit VR and select Saved report to download it. No accounts or analytics.</p><button id="begin" class="primary">Start commissioning →</button></dialog>
+  <div id="fatal" hidden></div>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
