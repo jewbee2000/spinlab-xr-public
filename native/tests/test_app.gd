@@ -25,6 +25,8 @@ func _run_tests() -> void:
 		_finish()
 		return
 	app = scene.instantiate()
+	app.tutorial_settings_path = ""
+	app.tutorial_autostart = false
 	root.add_child(app)
 	app.set_process(false)
 	app.set_process_unhandled_input(false)
@@ -81,7 +83,7 @@ func _test_world_controls() -> void:
 		for button in app.buttons:
 			_check(button is StaticBody3D, "World button is ray-collidable")
 			_check(not str(button.get_meta("action", "")).is_empty(), "World button has an action")
-			_check((button.collision_layer & 1) == 1, "World button uses controller collision layer")
+			_check((button.collision_layer & 1) == (1 if button.enabled and button.is_visible_in_tree() else 0), "Only visible enabled buttons use controller collision layer")
 			var shapes: Array = button.find_children("*", "CollisionShape3D", false, false)
 			_check(not shapes.is_empty() and shapes[0].shape != null, "World button has a collision shape")
 			_check(is_instance_valid(button.face) and is_instance_valid(button.text_label), "World button has a visible face and caption")

@@ -1,20 +1,23 @@
 # SpinLab XR — architecture and implementation plan
 
-Updated 18 October 2026. SpinLab XR is an educational reaction-wheel balancing and commissioning simulation. The active application is a **Godot 4.7.2 / OpenXR standalone ARM64 APK for Quest 2**, version 0.3. A separate Three.js/WebXR version 0.1 remains available as a browser demonstrator. The two applications have different interaction and numerical capabilities; identify their setup and results by version.
+Updated 18 October 2026. SpinLab XR is an educational reaction-wheel balancing and commissioning simulation. The active application is a **Godot 4.7.2 / OpenXR standalone ARM64 APK for Quest 2**, version 0.4. A separate Three.js/WebXR version 0.1 remains available as a browser demonstrator. The two applications have different interaction and numerical capabilities; identify their setup and results by version.
 
-Use [APK_SETUP.md](APK_SETUP.md) for installation and controls, [DIRECT_INTERACTION_DESIGN.md](DIRECT_INTERACTION_DESIGN.md) for contact and grip behavior, [NATIVE_RESEARCH.md](NATIVE_RESEARCH.md) for scientific methods, and [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md) for recorded evidence. [DEMO_GUIDE.md](DEMO_GUIDE.md) provides a repeatable demonstration and capture procedure.
+Use [APK_SETUP.md](APK_SETUP.md) for installation and controls, [TUTORIAL.md](TUTORIAL.md) for guided learning, [DIRECT_INTERACTION_DESIGN.md](DIRECT_INTERACTION_DESIGN.md) for contact and grip behavior, [NATIVE_RESEARCH.md](NATIVE_RESEARCH.md) for scientific methods, and [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md) for recorded evidence. [DEMO_GUIDE.md](DEMO_GUIDE.md) provides a repeatable demonstration and capture procedure.
 
 ## Implemented application
 
 The learner installs a rotor, references a vibration probe, closes an interlocked enclosure, records a baseline and known trial response, calculates correction masses, and verifies the corrected rotor with a fresh acquisition. An advanced exercise uses two correction planes and two coupled sensor channels.
 
-Version 0.3 includes:
+Version 0.4 includes:
 
 - An original procedural laboratory, workbench, spindle, rotor cassette, two correction planes, probe stage, and counterbalanced lift guard.
 - Controller-tracked articulated gloves, fingertip button presses with visible cap travel, nearby rotor pickup and seating, continuous guard movement, and wrist-operated dials.
 - Guided and expert operation, single- and two-plane balancing, waveform/DFT/sweep views, repeatability, fault injection and recovery, an exploded teaching view, and optional synthesized motor audio.
 - Station height/distance/recenter controls, optional button reach assist, haptics, and a desktop review interface.
 - Isolated worker-thread signal analysis, deterministic scenarios, command/interaction history, and persistent JSON reports.
+- A fifth **Learn** tab with 23 WHAT/WHY pages, state-gated manual Next, contextual Practice, a compact task coach, Back/Skip controls, persistent startup preference, and manual restart without resetting the laboratory.
+
+First launch opens Learn by default. Skip for now closes it without changing the startup preference; STARTUP: OFF persists across launches. Completion turns startup off, and the Learn tab remains available for manual review. Instruction navigation never starts a run or changes the fixture. Deliberate laboratory actions described by a lesson can invalidate calibration, so optional two-plane/fault exercises can be skipped to preserve work.
 
 The virtual hardware and measurements are synthetic. The application does not control laboratory equipment or use headset tracking, cameras, or microphones as vibration sensors.
 
@@ -29,7 +32,9 @@ The virtual hardware and measurements are synthetic. The application does not co
 | `native/scripts/lab_geometry.gd` | Procedural fixture/environment, moving assemblies, interaction targets, and visual engineering state. Shared meshes and MultiMesh instances reduce repeated draw work. |
 | `native/scripts/lab_button.gd` | World-space button geometry, captions, metadata, and cap depression. Input ownership and command dispatch remain in the application. |
 | `native/scripts/panel_chart.gd` | Bounded world-space traces and graph grids. Instrument labels declare signal type and units. |
-| `native/tests/` | Numerical, contact, hand geometry, command/UI, and direct-hand integration verification without a headset. |
+| `native/scripts/lab_tutorial.gd` | Self-paced lesson content, read-only snapshot/accepted-event gates, navigation, and tutorial preference persistence. It never operates or resets the laboratory model. |
+| `native/scripts/tutorial_panel.gd` | WHAT/WHY lesson panel, progress/hints, contextual Practice, disabled Next, and visible navigation. It uses the existing world-button input path. |
+| `native/tests/` | Numerical, contact, hand geometry, command/UI, direct-hand, and tutorial model/panel/application verification without a headset. |
 | `tools/` | Toolchain preparation, APK build/install, and device report retrieval. Downloaded tools, generated Android templates, signing keys, and device captures stay outside source control. |
 
 Analysis workers receive isolated configuration, arrays, and random-number state. The main thread accepts results after joining a worker. Stop, E-stop, and interruption paths discard cancelled results. Rendering continues during analysis; software concurrency checks do not establish headset frame pacing.
@@ -51,7 +56,7 @@ The native model uses mass in grams, radius in millimetres, speed in rpm, phase 
 
 A sweep is not a transient flexible-rotor integration. Repeatability is not a complete uncertainty budget. Near-zero synchronous phase is marked unobservable at the simulated noise floor. Single-plane correction minimizes sensor A at one speed and can leave sensor B motion. The model does not establish an ISO balance grade, instrument calibration, structural qualification, bearing life, vacuum/thermal behavior, or flight performance. Assumptions and references are maintained in [NATIVE_RESEARCH.md](NATIVE_RESEARCH.md).
 
-JSON reports retain configuration and units, baseline/trial/verification records, calculated corrections, sweep data, methodology/references, event history, interaction history, and application diagnostics. Reports persist in `user://reports` with unique filenames. Relaunching starts a fresh live station rather than resuming a rotating acquisition.
+JSON reports retain configuration and units, baseline/trial/verification records, calculated corrections, sweep data, methodology/references, event history, interaction history, application diagnostics, and a tutorial progress snapshot. Tutorial completion is separate from measurement verification or competence. Reports persist in `user://reports` with unique filenames. Relaunching starts a fresh live station rather than resuming a rotating acquisition. Tutorial startup/completion preferences persist separately in `user://tutorial.cfg`.
 
 ## Interaction and state requirements
 
@@ -62,6 +67,8 @@ Direct buttons actuate 6 mm behind the resting cap surface, show up to 8 mm trav
 Nearby rotor, guard, and dial grips have exclusive ownership. Shared controls for the same probe adjustment share a resource lock. Starting an acquisition while a mechanism is held is rejected. Manipulation requires zero speed and no pending acquisition/analysis; correction changes also require a mounted rotor and open guard. Opening a closed lift guard removes its interlock; lowering fully and releasing latches it. Tracking/focus loss cancels holds without seating an uncommitted rotor.
 
 Keep the work area stationary and forward-facing. Height, distance, recenter, and optional reach assist support seated/standing positions. Avoid artificial head motion and camera shake. Validate button targeting, controller clearance, text legibility, dial motion, and comfortable reach on physical hardware.
+
+The five tabs are Operate, Balance, Analyze, Session, and Learn. Practice opens an ordinary menu while the coach keeps the selected lesson visible. Next requires live readiness or accepted outcomes and advances only by deliberate selection. Back, Skip lesson, and Skip for now remain escape routes when a practice objective is unmet. Contact resets on lesson/menu changes prevent a newly appearing control from actuating under an embedded fingertip.
 
 ## Assets and rendering
 
@@ -74,7 +81,7 @@ Any added model, texture, font, sound, or dependency must have a recorded source
 ## Build and verification workflow
 
 1. Prepare the pinned Windows toolchain with `tools/Setup-NativeToolchain.ps1`. It installs the matching Android Gradle source template and delegates the final test/export gate to `tools/Build-APK.ps1`.
-2. Build with `tools/Build-APK.ps1`. Numerical, contact, geometry, and application checks must pass before exporting the signed ARM64 APK. Signing and immersive launch metadata require their own checks.
+2. Build with `tools/Build-APK.ps1`. Numerical, contact, geometry, application, and tutorial checks must pass before exporting the signed ARM64 APK to `artifacts/SpinLabXR-v0.4.0.apk`. Signing and immersive launch metadata require their own checks.
 3. Install using `tools/Install-APK.ps1` after authorizing USB debugging. Keep the development signing key for compatible updates; do not commit it.
 4. Run the physical acceptance procedure in [APK_SETUP.md](APK_SETUP.md), then retrieve reports with `tools/Pull-Quest-Reports.ps1`.
 5. Record the APK version/hash, device OS/runtime, scenario, observed behavior, and relevant report/capture with each issue. Rebuild and repeat affected checks after changes.
@@ -87,15 +94,16 @@ The separate browser demonstrator uses its Node.js model/server tests and packag
 | --- | --- |
 | Native scientific model | Implemented with deterministic numerical tests, including synchronous/threaded equivalence and cancellation. |
 | Direct interaction | Implemented with contact, geometry, ownership, and actual command-handler checks; standalone hand renders have been reviewed. |
-| APK packaging | Version 0.3 signed ARM64 APK builds and installs on Quest 2. Build evidence and hashes are recorded in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md). |
+| APK packaging | Version 0.4 signed ARM64 APK built and installed on Quest 2. Export/signature/install evidence and its hash are recorded in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md). |
 | Physical launch foundation | Version 0.2 hardware observations confirm the 3D lab, controller interaction, and spinning rotor. A short recorded runtime interval does not establish sustained performance. |
 | Version 0.3 physical acceptance | Pending: hand fit, both index tips, intentional presses, rotor seating, guard latching, wrist dials, readability, reach, interruption recovery, report retrieval, and sustained comfort/frame pacing. |
+| Version 0.4 Learn feature | Implemented lesson/state/panel integration; tutorial test evidence is recorded separately. Physical acceptance remains pending for first-launch discovery, full text, practice/return navigation, gated Next, skip/restart, preference persistence, and comfortable use alongside real controls. |
 | Demonstration records | Capture repeatable scenarios and supporting reports using [DEMO_GUIDE.md](DEMO_GUIDE.md), identifying desktop versus headset evidence. |
 
 ## Next implementation and test priorities
 
-1. Complete the version 0.3 headset exercise with both hands. Tune placement, grip offsets, contact thresholds, or text size from reproducible feedback.
-2. Verify complete single-plane and two-plane sequences, deliberate failures, report persistence/retrieval, standby/re-entry, and recentering. Confirm rejected operations leave scientific and visual state consistent.
+1. Complete the version 0.4 headset exercise and tutorial with both hands. Check first-launch Learn, Skip for now, startup OFF, manual restart, and full WHAT/WHY text. Tune placement, grip offsets, contact thresholds, or text size from reproducible feedback.
+2. Verify complete single-plane and two-plane sequences, deliberate failures, report persistence/retrieval, standby/re-entry, and recentering. Check that tutorial gates reflect accepted outcomes, cancelled acquisitions, and calibration invalidation without altering scientific state.
 3. Profile at least five minutes of reaching, carrying, adjustment, and analysis. Correlate foreground session intervals with runtime statistics; exclude startup, paused/off-head, and unrelated application intervals.
 4. Address measured CPU/GPU or interaction issues, then repeat relevant checks. Retain original captures and the tested APK hash.
 

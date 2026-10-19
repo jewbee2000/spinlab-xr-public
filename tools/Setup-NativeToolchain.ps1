@@ -71,6 +71,9 @@ $taskAndroidRoot=Join-Path $taskRoot 'native\android'
 $taskBuildRoot=Join-Path $taskAndroidRoot 'build'
 $taskBuildMarker=Join-Path $taskAndroidRoot '.build_version'
 $taskBuildVersion='4.7.2.stable'
+# Gradle resources and exported assets must never be imported as game sources.
+New-Item -ItemType Directory -Force $taskAndroidRoot | Out-Null
+[IO.File]::WriteAllText((Join-Path $taskAndroidRoot '.gdignore'),'')
 if(Test-Path -LiteralPath $taskBuildMarker){
   if((Get-Content -LiteralPath $taskBuildMarker -Raw).Trim() -ne $taskBuildVersion){throw 'Existing Android build template uses another Godot version. Preserve any custom changes and replace native/android deliberately before rerunning setup.'}
 }elseif(Test-Path -LiteralPath (Join-Path $taskBuildRoot 'build.gradle')){

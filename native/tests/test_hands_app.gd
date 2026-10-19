@@ -42,6 +42,8 @@ func _run_tests() -> void:
 		_finish()
 		return
 	app = scene.instantiate()
+	app.tutorial_settings_path = ""
+	app.tutorial_autostart = false
 	root.add_child(app)
 	app.set_process(false)
 	app.set_process_unhandled_input(false)

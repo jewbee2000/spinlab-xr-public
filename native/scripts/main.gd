@@ -6,7 +6,9 @@ const Button3D = preload("res://scripts/lab_button.gd")
 const Chart3D = preload("res://scripts/panel_chart.gd")
 const HandVisual = preload("res://scripts/virtual_hand.gd")
 const DirectContact = preload("res://scripts/direct_interaction.gd")
-const APP_VERSION = "0.3.0"
+const Tutorial = preload("res://scripts/lab_tutorial.gd")
+const LessonPanel = preload("res://scripts/tutorial_panel.gd")
+const APP_VERSION = "0.4.0"
 const TEAL = Color("6ce5c9")
 const INK = Color("e6f1f5")
 const DIM = Color("9db7c6")
@@ -59,10 +61,18 @@ var interaction_events: Array = []
 var input_focused := true
 var app_has_focus := true
 var xr_has_focus := true
+## Override before entering the tree for isolated tests; empty path is memory-only.
+var tutorial_settings_path := "user://tutorial.cfg"
+var tutorial_autostart := true
+var tutorial
+var tutorial_panel
+var control_backplate: MeshInstance3D
+var lesson_navigation: Array = []
 
 func _ready() -> void:
 	name="SpinLabXR"
 	model.async_processing=true
+	tutorial=Tutorial.new(tutorial_settings_path)
 	_setup_world()
 	add_child(station)
 	station.position.z=station_distance
@@ -76,6 +86,9 @@ func _ready() -> void:
 	_build_dials()
 	_build_desktop_hud()
 	_setup_sound()
+	if tutorial_autostart and tutorial.should_autostart():
+		tutorial.start(_tutorial_context());tab="learn";_rebuild_menu()
+	if not tutorial.settings_error.is_empty():status=tutorial.settings_error+"; using default tutorial preferences."
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture="): capture_path=arg.trim_prefix("--capture=")
 		if arg=="--showcase":
@@ -192,12 +205,15 @@ func _button(parent: Node3D, caption: String, command: String, pos: Vector3, wid
 func _build_controls() -> void:
 	station.add_child(controls)
 	controls.position=Vector3(-0.46,1.50,-1.08)
-	_box(controls,Vector3(0.82,0.68,0.025),Vector3(0,0,0),Color("132634"))
+	control_backplate=_box(controls,Vector3(0.82,0.76,0.025),Vector3(0,-0.04,0),Color("132634"))
 	_label(controls,"SPINLAB XR  /  DIRECT HANDS",Vector3(-0.37,0.314,0.021),27,0.00059,TEAL)
-	for i in range(4):
-		var keys=["operate","balance","diagnostic","session"]
-		var titles=["OPERATE","BALANCE","ANALYZE","SESSION"]
-		_button(controls,titles[i],"tab:"+keys[i],Vector3(-0.30+i*0.20,0.235,0.027),0.187,0.052)
+	for i in range(5):
+		var keys=["operate","balance","diagnostic","session","learn"]
+		var titles=["OPERATE","BALANCE","ANALYZE","SESSION","LEARN"]
+		_button(controls,titles[i],"tab:"+keys[i],Vector3(-0.32+i*0.16,0.235,0.027),0.15,0.052)
+	tutorial_panel=LessonPanel.new();controls.add_child(tutorial_panel);tutorial_panel.configure()
+	buttons.append_array(tutorial_panel.interactive_buttons)
+	lesson_navigation=[_button(controls,"LESSON / NEXT","tutorial:open_next",Vector3(-0.195,-0.34,0.029),0.37,0.055),_button(controls,"SKIP TUTORIAL","tutorial:skip",Vector3(0.195,-0.34,0.029),0.37,0.055)]
 	_rebuild_menu()
 
 func _rebuild_menu() -> void:
@@ -205,6 +221,14 @@ func _rebuild_menu() -> void:
 	for b in buttons.duplicate():
 		if b.get_meta("menu",false):
 			buttons.erase(b);b.queue_free()
+	tutorial_panel.set_panel_active(tab=="learn")
+	control_backplate.mesh.size=Vector3(0.82,0.84 if tab=="learn" else 0.76,0.025)
+	control_backplate.position.y=-0.08 if tab=="learn" else -0.04
+	for button in lesson_navigation:
+		button.visible=tab!="learn" and tutorial.active
+		button.set_enabled(button.visible)
+	if tab=="learn":
+		_refresh_tutorial();return
 	var items: Array=[]
 	match tab:
 		"operate":items=[["LOAD ROTOR / CARTRIDGE","mount"],["HOME VIBRATION PROBE","home"],["CLOSE / OPEN GUARD","guard"],["RECORD BASELINE","baseline"],["STOP / CONTROLLED COAST","stop"],["EMERGENCY STOP","estop"],["RELEASE / RESET FAULT","recover"],["MODE: SINGLE / TWO PLANE","mode"]]
@@ -254,14 +278,16 @@ func _build_dials() -> void:
 func _build_desktop_hud() -> void:
 	if xr_active:return
 	var layer=CanvasLayer.new();add_child(layer)
-	var label=Label.new();label.text="SPINLAB XR  /  NATIVE ENGINEERING LAB    v"+APP_VERSION+"\nDrag right mouse to orbit · Wheel to zoom · Click world controls · 1/2/3/4 menu tabs"
+	var label=Label.new();label.text="SPINLAB XR  /  NATIVE ENGINEERING LAB    v"+APP_VERSION+"\nDrag right mouse to orbit · Wheel to zoom · Click world controls · 1/2/3/4/5 menu tabs (5: Learn)"
 	label.position=Vector2(24,18);label.add_theme_font_size_override("font_size",18);label.modulate=TEAL;layer.add_child(label)
 	desktop_status=Label.new();desktop_status.position=Vector2(24,930);desktop_status.add_theme_font_size_override("font_size",16);desktop_status.modulate=DIM;layer.add_child(desktop_status)
 	var hud=HBoxContainer.new();hud.position=Vector2(24,90);layer.add_child(hud)
 	for entry in [["Load","mount"],["Home","home"],["Guard","guard"],["Baseline","baseline"],["Trial fit","fit_trial"],["Trial A","trial_a"],["Trial B","trial_b"],["Solve","solve"],["Apply","apply"],["Verify","verify"],["Sweep","sweep"],["E-stop","estop"],["Save","save"]]:
 		var b=Button.new();b.text=entry[0];b.pressed.connect(_action.bind(entry[1]));hud.add_child(b)
 
-func _action(command: String) -> void:
+func _action(command: String, input_kind: String="") -> void:
+	if command.begins_with("tutorial:"):
+		_tutorial_action(command);return
 	if not grab_owners.is_empty() and (command in ["home","mode","plane","fit_trial","apply","speed","explode"] or command.begins_with("nudge:")):
 		status="Release the held fixture control before changing its setup."
 		_update_ui();return
@@ -269,7 +295,10 @@ func _action(command: String) -> void:
 		status="Release the rotor, guard handle, and dials before starting the spindle."
 		_update_ui();return
 	if command.begins_with("tab:"):
-		tab=command.trim_prefix("tab:");_rebuild_menu();return
+		tab=command.trim_prefix("tab:")
+		if tab=="learn" and not tutorial.active:tutorial.start(_tutorial_context())
+		tutorial.observe(_tutorial_context(),{"command":command,"ok":true,"input_kind":input_kind})
+		_rebuild_menu();_update_ui();return
 	if command.begins_with("nudge:"):
 		var parts=command.split(":");var steps={"probe":0.05,"mass":0.025,"angle":5.0};_set_dial(parts[1],_dial_value(parts[1])+float(parts[2])*steps[parts[1]]);return
 	var result: Dictionary={"ok":true,"message":""}
@@ -294,7 +323,7 @@ func _action(command: String) -> void:
 		"coach":coach=not coach;result.message="Guided coach enabled" if coach else "Expert mode: use measured amplitude and phase."
 		"sound":sound_on=not sound_on;result.message="Motor sonification enabled" if sound_on else "Motor sonification muted"
 		"save":_save_report();return
-		"new":_cancel_hand_interactions();result=model.reset();active_plane=0;geometry.guard_preview=-1.0
+		"new":_cancel_hand_interactions();result=model.reset();active_plane=0;geometry.guard_preview=-1.0;saved_path=""
 		"lower":_cancel_hand_interactions();station.position.y=clampf(station.position.y-0.1,-0.5,0.3);result.message="Station lowered."
 		"raise":_cancel_hand_interactions();station.position.y=clampf(station.position.y+0.1,-0.5,0.3);result.message="Station raised."
 		"distance":_cancel_hand_interactions();station_distance=0.82 if station_distance<0.70 and station_distance>0.60 else 0.45 if station_distance>0.70 else 0.65;station.position.z=station_distance;result.message="Bench reach adjusted. Withdraw your hand before the next press."
@@ -304,19 +333,73 @@ func _action(command: String) -> void:
 		"exit":get_tree().quit();return
 		_:return
 	status=result.get("message","")
+	tutorial.observe(_tutorial_context(),{"command":command,"ok":result.get("ok",false),"input_kind":input_kind})
 	_update_ui()
 
 func _dial_value(kind: String) -> float:
 	return float(model.sensor_position_mm) if kind=="probe" else float(model.masses[active_plane]) if kind=="mass" else float(model.angles[active_plane])
 
+func _tutorial_context() -> Dictionary:
+	return {"mounted":model.mounted,"homed":model.homed,"guard_closed":model.guard_closed,"estop":model.estop,"fault":model.fault,"rpm":model.rpm,"running":model.running,"processing":model.processing,"sensor_position_mm":model.sensor_position_mm,"masses":model.masses.duplicate(),"angles":model.angles.duplicate(),"mode":model.mode,"active_plane":active_plane,"test_rpm":model.test_rpm,"radius_mm":model.radius_mm,"records":model.records,"baseline":model.baseline,"trial_a":model.trial_a,"trial_b":model.trial_b,"solution":model.solution,"latest":model.latest,"tab":tab,"chart_kind":chart_kind,"reach_assist":reach_assist,"exploded":exploded,"sound_on":sound_on,"coach":coach,"saved_report":not saved_path.is_empty() and FileAccess.file_exists(saved_path),"grab_owners_empty":grab_owners.is_empty()}
+
+func _refresh_tutorial() -> void:
+	if tutorial==null or not is_instance_valid(tutorial_panel):return
+	var view=tutorial.view(_tutorial_context())
+	view["startup_enabled"]=tutorial.startup_enabled
+	view["can_back"]=tutorial.index>0
+	tutorial_panel.update_view(view)
+	for button in lesson_navigation:
+		button.visible=tab!="learn" and tutorial.active
+		button.set_enabled(button.visible)
+	lesson_navigation[0].set_caption("LESSON / NEXT" if view.ready else "OPEN LESSON")
+
+func _tutorial_action(command: String) -> void:
+	var context=_tutorial_context()
+	match command:
+		"tutorial:skip":
+			tutorial.skip();tab="operate";status="Tutorial paused. Open Learn to restart; startup preference is unchanged."
+		"tutorial:startup":
+			var result=tutorial.set_startup(not tutorial.startup_enabled)
+			status="Tutorial at startup: "+("ON" if tutorial.startup_enabled else "OFF") if result.ok else result.message
+		"tutorial:restart":
+			tutorial.start(context);tab="learn";status="Tutorial restarted. Your lab measurements are preserved."
+		"tutorial:practice":
+			var target_tab=str(tutorial.view(context).get("practice_tab",""))
+			if target_tab.is_empty():return
+			tab=target_tab
+			status="Follow the lesson on the coach board. Open Learn / Next when ready."
+		"tutorial:back":
+			status=tutorial.back().message;tab="learn"
+		"tutorial:skip_step":
+			var result=tutorial.skip_step()
+			status=result.message;tab="operate" if result.get("finished",false) else "learn"
+		"tutorial:next","tutorial:open_next":
+			var result=tutorial.next(context)
+			status=result.get("message","")
+			tab="operate" if result.get("finished",false) else "learn"
+		"tutorial:touch":
+			tutorial.observe(context,{"command":"tutorial:touch","ok":true})
+			status="Practice press registered. Withdraw your finger to release the button."
+		_:return
+	_rebuild_menu();_update_ui()
+
+func _tutorial_report() -> Dictionary:
+	var view=tutorial.view(_tutorial_context())
+	return {"active":tutorial.active,"step_id":view.id,"step_index":tutorial.index,"step_count":tutorial.steps.size(),"completed":tutorial.completed,"startup_enabled":tutorial.startup_enabled,"note":"Tutorial progress is self-paced guidance, separate from measurement verification or operator qualification."}
+
 func _set_dial(kind: String, value: float) -> void:
+	var previous=_dial_value(kind)
 	var r: Dictionary
 	if kind=="probe":r=model.set_probe(clampf(snappedf(value,0.01),0,12))
 	elif kind=="mass":r=model.set_correction(active_plane,clampf(snappedf(value,0.001),0,2),model.angles[active_plane])
 	else:r=model.set_correction(active_plane,model.masses[active_plane],fposmod(snappedf(value,0.5),360))
 	status=r.get("message","")
+	tutorial.observe(_tutorial_context(),{"command":"dial:"+kind,"ok":r.get("ok",false),"changed":not is_equal_approx(previous,_dial_value(kind))})
 
 func _coach_text(t: Dictionary) -> String:
+	if tutorial!=null and tutorial.active:
+		var lesson=tutorial.view(_tutorial_context())
+		return "%s / %s\n%s"%[lesson.progress,lesson.title,"Ready: open Learn / Next to continue." if lesson.ready else lesson.hint]
 	if not coach:return "EXPERT LAB / "+model.mode.replace("_"," ").to_upper()+" / Active correction plane "+("A" if active_plane==0 else "B")
 	if t.get("fault","")!="":return "FAULT RECOVERY / wait for zero speed; release E-stop, close guard, then reset."
 	if t.get("running",false):return "ACQUIRING / keep guard closed. Tach reference separates 1× vibration from noise."
@@ -331,6 +414,8 @@ func _coach_text(t: Dictionary) -> String:
 
 func _update_ui() -> void:
 	if readouts.is_empty():return
+	tutorial.observe(_tutorial_context())
+	_refresh_tutorial()
 	var t=model.telemetry()
 	readouts.speed.text="%d RPM   /   %s"%[roundi(model.rpm),model.mode.replace("_"," ").to_upper()]
 	var amps=t.get("amplitudes_um",[0.0,0.0]);var phases=t.get("phases_deg",[0.0,0.0])
@@ -412,8 +497,12 @@ func _save_report() -> void:
 	report["interaction_events"]=interaction_events.duplicate(true)
 	report["runtime_samples"]=runtime_samples.duplicate(true)
 	report["runtime_note"]="Application-loop timing samples; not compositor, GPU-frame-time, or comfort acceptance."
+	report["tutorial"]=_tutorial_report()
 	var file=FileAccess.open(saved_path,FileAccess.WRITE)
-	if file:file.store_string(JSON.stringify(report,"\t"));status="REPORT SAVED / "+ProjectSettings.globalize_path(saved_path)
+	if file:
+		file.store_string(JSON.stringify(report,"\t"));file.close()
+		status="REPORT SAVED / "+ProjectSettings.globalize_path(saved_path)
+		tutorial.observe(_tutorial_context(),{"command":"save","ok":true})
 	else:status="Report could not be written: "+str(FileAccess.get_open_error())
 	print("SPINLAB_REPORT ",ProjectSettings.globalize_path(saved_path))
 	_update_ui()
@@ -426,14 +515,14 @@ func _controller_pressed(input_name: String, entry: Dictionary) -> void:
 		var ray=entry.ray;ray.force_raycast_update()
 		if ray.is_colliding():
 			var target=ray.get_collider()
-			if target is LabButton:
+			if target is LabButton and target.enabled and target.is_visible_in_tree():
 				_physical_action(str(target.get_meta("action","")),"reach_assist");_haptic(entry,0.22)
 
 func _controller_released(input_name: String, entry: Dictionary) -> void:
 	if input_name=="by_button" and entry.by_started>=0:
 		if not entry.by_handled and Time.get_ticks_msec()-entry.by_started<850:
-			var tabs=["operate","balance","diagnostic","session"]
-			_action("tab:"+tabs[(tabs.find(tab)+1)%4])
+			var tabs=["operate","balance","diagnostic","session","learn"]
+			_action("tab:"+tabs[(tabs.find(tab)+1)%tabs.size()])
 		entry.by_started=-1
 
 func _make_hand_entry(controller: Node3D, grip_node: Node3D) -> Dictionary:
@@ -448,12 +537,13 @@ func _interaction_event(kind: String, target: String) -> void:
 	interaction_events.append({"time_s":model.time,"kind":kind,"target":target})
 	if interaction_events.size()>512:interaction_events.pop_front()
 	print("SPINLAB_INTERACTION ",kind," ",target)
+	if tutorial!=null:tutorial.observe(_tutorial_context(),{"kind":kind,"target":target,"ok":kind not in ["fingertip","reach_assist"]})
 
 func _physical_action(command: String, input_kind: String="fingertip") -> void:
 	_interaction_event(input_kind,command)
 	if command=="mount":status="Reach the tray rotor and hold grip. Carry it upright onto the spindle, then release.";return
 	if command=="guard":status="Grip the orange enclosure handle nearby. Lift to open; lower fully to latch.";return
-	_action(command)
+	_action(command,input_kind)
 
 func _reset_pokes() -> void:
 	button_latches.clear();frame_latches.clear();frame_depths.clear()
@@ -466,7 +556,7 @@ func _process_pokes(entry: Dictionary, tip: Vector3, delta: float, tracked: bool
 		entry.contacts.clear();return
 	var alive: Dictionary={}
 	for button in buttons.duplicate():
-		if not is_instance_valid(button) or button.is_queued_for_deletion():continue
+		if not is_instance_valid(button) or button.is_queued_for_deletion() or not button.enabled or not button.is_visible_in_tree():continue
 		var id=button.get_instance_id();alive[id]=true
 		if not entry.contacts.has(id):entry.contacts[id]=DirectContact.PushContact.new()
 		var point=button.to_local(tip)-Vector3(0,0,button.front_z_m)
@@ -594,7 +684,7 @@ func _release_near_grab(entry: Dictionary, cancelled: bool=false) -> void:
 
 func _cancel_hand_interactions() -> void:
 	for entry in controllers:
-		_release_near_grab(entry,true);entry.grip_armed=false;entry.grip_down=false
+		_release_near_grab(entry,true);entry.grip_armed=false;entry.grip_down=false;entry.by_started=-1;entry.by_handled=false
 	_reset_pokes()
 
 func _set_xr_focus(focused: bool) -> void:
@@ -640,7 +730,9 @@ func _update_controllers(delta: float) -> void:
 		entry.beam.visible=reach_assist and entry.held==""
 		if entry.beam.visible:
 			entry.ray.force_raycast_update()
-			if entry.ray.is_colliding() and entry.ray.get_collider() is LabButton:entry.ray.get_collider().hover(true)
+			if entry.ray.is_colliding() and entry.ray.get_collider() is LabButton:
+				var target=entry.ray.get_collider()
+				if target.enabled and target.is_visible_in_tree():target.hover(true)
 		if entry.by_started>=0 and not entry.by_handled and Time.get_ticks_msec()-entry.by_started>=850:
 			entry.by_handled=true;_action("assist");_haptic(entry,0.3)
 		var stick=c.get_vector2("primary")
@@ -662,10 +754,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 			var query=PhysicsRayQueryParameters3D.create(camera.project_ray_origin(event.position),camera.project_ray_origin(event.position)+camera.project_ray_normal(event.position)*8)
 			var hit=get_world_3d().direct_space_state.intersect_ray(query)
-			if not hit.is_empty():_action(str(hit.collider.get_meta("action","")))
+			if not hit.is_empty() and hit.collider.is_visible_in_tree() and (not hit.collider is LabButton or hit.collider.enabled):_action(str(hit.collider.get_meta("action","")))
 	if event is InputEventMouseMotion and mouse_drag:desktop_yaw-=event.relative.x*0.004;desktop_pitch=clampf(desktop_pitch-event.relative.y*0.003,-0.9,0.15);_desktop_camera()
 	if event is InputEventKey and event.pressed:
-		if event.keycode in [KEY_1,KEY_2,KEY_3,KEY_4]:_action("tab:"+["operate","balance","diagnostic","session"][event.keycode-KEY_1])
+		if event.keycode in [KEY_1,KEY_2,KEY_3,KEY_4,KEY_5]:_action("tab:"+["operate","balance","diagnostic","session","learn"][event.keycode-KEY_1])
 
 func _setup_sound() -> void:
 	audio=AudioStreamPlayer3D.new();audio.position=Vector3(0,1.1,-1.4);station.add_child(audio)

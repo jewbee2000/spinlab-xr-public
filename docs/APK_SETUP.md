@@ -1,8 +1,8 @@
 # Install and test the native Quest 2 APK
 
-These instructions are for the **v0.3 standalone Android/OpenXR app** with visible Touch-controller gloves and direct interactions. The older browser instructions remain in [INSTALL_QUEST2.md](INSTALL_QUEST2.md). After installation, the native app runs on the headset without a local web server, Quest Link, or a tethered gaming PC.
+These instructions are for the **v0.4 standalone Android/OpenXR app** with its Learn tutorial, visible Touch-controller gloves, and direct interactions. The older browser instructions remain in [INSTALL_QUEST2.md](INSTALL_QUEST2.md). After installation, the native app runs on the headset without a local web server, Quest Link, or a tethered gaming PC.
 
-Instructions checked 18 October 2026. Meta may change menu names. A physical Quest 2 smoke test confirmed v0.2's lab, controller buttons, and spinning rotor. Version 0.3's new hand/contact behavior still needs physical acceptance. Neither that interaction nor report retrieval is established by the earlier v0.2 test.
+Instructions checked 18 October 2026. Meta may change menu names. A physical Quest 2 smoke test confirmed v0.2's lab, controller buttons, and spinning rotor; v0.3 installed successfully. Direct-hand behavior, report retrieval, and sustained performance remain unconfirmed. Version 0.4 installed successfully and its tutorial requires its own physical acceptance; installation does not establish readability or interaction quality. Build/install evidence belongs in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md).
 
 ## 1. Enable developer mode and authorize this computer
 
@@ -49,10 +49,10 @@ The repository includes helpers: `tools/Install-APK.ps1` installs and launches `
 
 ## 3. Install the built APK
 
-The built APK is `artifacts/SpinLabXR-v0.3.0.apk` and its Android package is `us.teitelbaum.spinlabxr`. In the same PowerShell window:
+The v0.4 build output is `artifacts/SpinLabXR-v0.4.0.apk` and its Android package is `us.teitelbaum.spinlabxr`. Build it with `tools/Build-APK.ps1`, or place the matching downloaded release APK at that path. In the same PowerShell window:
 
 ```powershell
-$spinlabApk = Join-Path (Get-Location) 'artifacts\SpinLabXR-v0.3.0.apk'
+$spinlabApk = Join-Path (Get-Location) 'artifacts\SpinLabXR-v0.4.0.apk'
 Test-Path -LiteralPath $spinlabApk
 & $spinlabAdb install -r $spinlabApk
 ```
@@ -65,20 +65,25 @@ Put on the headset, open **Library**, select **Unknown Sources**, and choose **S
 
 Start seated or standing with a clear boundary and both Touch controllers awake. **Keep holding the controllers.** The gloves use their tracked poses and inferred finger animation; you do not need to enable optical hand tracking in the headset settings.
 
-| Action | Version 0.3 headset control |
+On a fresh installation, **LEARN** opens as the fifth control-panel tab. Read WHAT and WHY, then choose Next or Practice. Practice opens the real control menu and leaves the current instruction on the compact coach board; it does not operate the fixture. Next on practical pages becomes available only after the required accepted state, and never advances automatically.
+
+Choose **Skip for now** to enter the lab without changing its data. Set **STARTUP: OFF** if you do not want the tutorial on later launches. Reopen the Learn tab manually and use Restart at any time; neither resets your measurements. Completing the final page also turns startup off. Back, Skip lesson, and Skip for now let you leave a practical objective unmet. [TUTORIAL.md](TUTORIAL.md) describes all 23 pages and the persistence behavior.
+
+| Action | Version 0.4 headset control |
 | --- | --- |
 | Push a menu button | Reach the visible index tip toward its front face and push through its short travel. Keep the index trigger released to extend the virtual finger. Withdraw before another press. A successful actuation gives one haptic click. |
 | Hold a nearby object/handle | Move the palm close until the `GRIP` hint appears, then squeeze and hold the controller's side grip. Release to let go. |
 | Load the rotor | Grip the tray rotor, carry it upright and centered over the spindle, then release. An unsuitable placement returns it to the tray. |
 | Open/close the guard | Grip the orange handle nearby. Lift the counterbalanced enclosure to open it; lower it fully and release to latch the interlock. |
 | Adjust a dial | Grip the nearby dial and rotate your wrist about its axis. The probe moves 0.5 mm per turn, mass changes 0.5 g per turn, and the angle dial follows the turn directly. Release to finish; nearby physical ± buttons make small increments. Thumbsticks do not turn dials. |
-| Change menu/chart | Short B/Y press cycles menu categories; A/X cycles analyzer charts. |
+| Change menu/chart | Short B/Y press cycles Operate, Balance, Analyze, Session, and Learn; A/X cycles analyzer charts. |
+| Return to the current lesson | Use OPEN LESSON while the objective is unmet, or LESSON / NEXT when ready. The Learn tab also returns to the active page. |
 | Use menu reach assist | Hold B/Y for about one second (0.85 s threshold), or select the Session-menu reach-assist control. Point the ray and use the index trigger for menu buttons. It does not remotely grab handles or load the rotor. |
 | Place the station within reach | Left thumbstick up/down changes bench height while no handle is held. The Session menu provides height, near/far distance, and recenter controls. Withdraw your hand after moving/recentering the station before the next press. |
 
 In XR, the **Load Rotor** and **Open/Close Guard** menu buttons explain the physical gesture; they do not move that mechanism for you. Motor sonification starts muted. When tracking quality drops or a system menu interrupts the app, hands/contact are suspended and active holds are cancelled; release the grip and approach again after tracking returns.
 
-For the first single-plane exercise:
+Follow Learn for the guided first exercise, or use this manual single-plane sequence:
 
 1. Grip the tray rotor, carry it upright to the spindle, and release to seat it. Push **Home Vibration Probe**.
 2. Grip the orange guard handle, lower fully, and release to latch. Push **Record Baseline**; wait for acquisition and coast-down to finish.
@@ -95,8 +100,9 @@ Check the new interactions as well as the lab sequence:
 3. Grip/carry/release the rotor, lift/latch the guard, and turn each dial. Confirm holding any mechanism inhibits a new acquisition. Check rejection of mass changes or opening the guard while the rotor is moving.
 4. Try running before setup, plus deliberate sensor/tach faults and E-stop recovery. Reset/release must not restart the rotor automatically.
 5. Change menu, move/recenter the station, and briefly interrupt tracking with the headset's system interface. Existing contact must not become a new press; reacquire the target deliberately.
-6. Save a report and use section 5 to retrieve it. Saving/retrieving on physical v0.2 remains unconfirmed; no files were available in the earlier retrieval check. Check this explicitly in v0.3 before relying on the export.
-7. Run for at least five minutes through representative pressing, carrying, dial adjustment, and analysis. Observe comfort, frame pacing, and controller responsiveness. The Quest 2 starting target is 72 Hz (about 13.9 ms per frame interval). The earlier v0.2 short runtime sample and a desktop FPS counter do not establish v0.3 sustained performance.
+6. Try Learn's first-time sequence, Practice/return, disabled Next, Back/Skip controls, and restart during existing work. Check the startup preference across an app relaunch and verify that a page change under a fingertip does not cause a press. Record any truncated text or unclear next action.
+7. Save a report and use section 5 to retrieve it. Saving/retrieving on physical v0.2 remains unconfirmed; no files were available in the earlier retrieval check. Check this explicitly in the installed v0.4 build before relying on the export.
+8. Run for at least five minutes through representative pressing, carrying, dial adjustment, lesson navigation, and analysis. Observe comfort, frame pacing, and controller responsiveness. The Quest 2 starting target is 72 Hz (about 13.9 ms per frame interval). The earlier v0.2 short runtime sample and a desktop FPS counter do not establish v0.4 sustained performance.
 
 Report what the headset actually does. An APK build, manifest inspection, or numerical unit test does not prove that the physical-controller and rendering checks passed.
 
@@ -137,7 +143,10 @@ From the project root, run `.\tools\Pull-Quest-Reports.ps1` for this signed deve
 | Load/Guard menu button only shows a hint | In XR these controls teach the gesture. Grip/carry the actual tray rotor or grip/lift/lower the orange guard handle. Reach assist does not replace those physical actions. |
 | Rotor returns to the tray | Release it upright and centered over the spindle with the guard open and spindle stopped. |
 | Guard remains unlatched | Lower the handle fully before releasing it. A partially raised counterbalanced guard remains open. |
-| Thumbstick does not adjust a dial | Version 0.3 uses a nearby grip plus wrist rotation; the physical ± buttons offer fine increments. |
+| Thumbstick does not adjust a dial | The native app uses a nearby grip plus wrist rotation; the physical ± buttons offer fine increments. |
+| Learn's Next is disabled | Read its hint, choose Practice, and complete the actual action; a rejected or interrupted run does not count. Use Back, Skip lesson, or Skip for now when you prefer to leave it. |
+| Learn opens on every launch | In Learn, select STARTUP: OFF. Skip for now leaves that preference unchanged. Learn remains available manually. |
+| Tutorial settings error | Record the full message. Continue with the lab if useful; its measurements and interlocks are separate from tutorial preferences. |
 | Text stutters or view feels uncomfortable | Record the plot/panel, operating scenario, headset OS, and duration; report perceived discomfort promptly. |
 
 ## Rebuilding from source
@@ -160,6 +169,8 @@ Installed and launched immersive? exact error if any:
 Both gloves / fingertip alignment / direct presses and retract:
 Rotor carry + upright seating / guard lift + full latch / wrist dials:
 Reach assist / menu cycling / height, distance, and recenter:
+Learn page / WHAT-WHY readability / Practice and return / Next gating:
+Skip for now / startup OFF persistence / manual restart:
 Tracking interruption and recovery:
 Readable text and seated/standing comfort:
 Baseline → trial(s) → correction → independent verification:
