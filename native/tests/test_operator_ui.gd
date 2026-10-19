@@ -91,6 +91,7 @@ func _run() -> void:
 	_test_navigation()
 	_test_navigation_interruptions()
 	_test_height_and_room()
+	_test_anchor_recovery()
 	print("OPERATOR UI TESTS: %d checks, %d failures" % [checks, failures])
 	app._cancel_hand_interactions()
 	app.controllers.clear()
@@ -476,3 +477,22 @@ func _test_height_and_room() -> void:
 	_check(app.station.position.y > previous, "Neutral rearming deliberately resumes station height")
 	app._action("recenter")
 	_check(not app.motion_armed and not app.height_armed, "Explicit recenter rearms both navigation inputs")
+
+func _test_anchor_recovery() -> void:
+	_fresh()
+	app.head_tracking_override=false
+	app.guide_anchor_pending=true
+	app.tutorial_panel.global_position=Vector3(0,0.2,0)
+	var untracked_position: Vector3=app.tutorial_panel.global_position
+	app._process(DT)
+	_near(app.tutorial_panel.global_position,untracked_position,"Untracked startup cannot place a guide from a stale head pose")
+	_check(app.guide_anchor_pending,"Untracked startup retains a pending placement")
+	app.head_tracking_override=true
+	app._process(DT)
+	_check(not app.guide_anchor_pending and app.tutorial_panel.global_position.y>app.camera.global_position.y,"First tracked head pose anchors the guide at reading height")
+	app._set_xr_focus(false)
+	app._process(DT)
+	app.camera.position+=Vector3(0.4,0,0)
+	app._set_xr_focus(true)
+	app._process(DT)
+	_check(not app.guide_anchor_pending and app.tutorial_panel.global_position.distance_to(app.camera.global_position)<1.6,"Focus return anchors guidance around the current head pose")

@@ -85,6 +85,7 @@ var guide_paused := false
 ## Optional override for deterministic controller/navigation tests.
 var head_tracking_override = null
 var recenter_pending_frames := 0
+var guide_anchor_pending := true
 
 func _ready() -> void:
 	name="SpinLabXR"
@@ -433,7 +434,7 @@ func _refresh_tutorial() -> void:
 	if tutorial==null or not is_instance_valid(tutorial_panel):return
 	var view=tutorial.view(_tutorial_context())
 	tutorial_panel.update_view(view)
-	tutorial_panel.set_panel_active(tutorial.active and not menu_open)
+	tutorial_panel.set_panel_active(tutorial.active and not menu_open and (not xr_active or _head_tracking_valid()))
 	if view.id!=guide_step_id:
 		guide_step_id=view.id
 	var offset=tutorial_panel.global_position-camera.global_position
@@ -802,6 +803,7 @@ func _on_pose_recentered() -> void:
 func _apply_input_focus() -> void:
 	input_focused=app_has_focus and xr_has_focus
 	motion_armed=false;height_armed=false
+	guide_anchor_pending=true
 	_cancel_hand_interactions()
 	if not input_focused and is_instance_valid(model) and (model.running or model.processing):
 		model.stop()
@@ -939,6 +941,11 @@ func _update_sound() -> void:
 		audio_playback.push_frame(Vector2(value,value))
 
 func _process(delta: float) -> void:
+	if not input_focused or not _head_tracking_valid():guide_anchor_pending=true
+	elif guide_anchor_pending:
+		guide_anchor_pending=false
+		if menu_open:_place_menu()
+		else:_place_guide()
 	if recenter_pending_frames>0:
 		recenter_pending_frames-=1
 		if recenter_pending_frames==0:
