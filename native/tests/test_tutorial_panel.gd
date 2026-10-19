@@ -1,6 +1,6 @@
 extends SceneTree
 ## Minimal visual content only; narration retains the source lesson paragraphs.
-## Optional -- --capture=<absolute.png> produces the full fifteen-callout grid.
+## Optional -- --capture=<absolute.png> produces the full course callout grid.
 const CalloutPanel = preload("res://scripts/tutorial_panel.gd")
 const Tutorial = preload("res://scripts/lab_tutorial.gd")
 var checks: int = 0
@@ -39,7 +39,7 @@ func _run() -> void:
 		var view: Dictionary = guide.view({})
 		panel.update_view(view)
 		_test_callout(panel, view)
-	_check(guide.steps == preserved and guide.index == 14 and not guide.completed, "Minimal rendering preserves every narration source and procedure gate")
+	_check(guide.steps == preserved and guide.index == guide.steps.size() - 1 and not guide.completed, "Minimal rendering preserves every narration source and procedure gate")
 	var display: Dictionary = guide.view({})
 	display.body = "Long narration instruction. ".repeat(100)
 	display.theory = "Long narration science. ".repeat(100)
@@ -83,7 +83,7 @@ func _test_callout(panel, view: Dictionary) -> void:
 	var context: String = str(view.id)
 	_check(action.split(" ", false).size() >= 2 and action.split(" ", false).size() <= 5, context + " uses a2–5word imperative")
 	_check(not action.contains("\n") and action.length() <= 28 and not panel.overflowed, context + " never wraps or truncates")
-	_check(panel.labels.progress.text == "%d/15" % [int(view.index) + 1], context + " retains minimal progression")
+	_check(panel.labels.progress.text == "%d/%d" % [int(view.index) + 1, int(view.total)], context + " retains minimal progression")
 	_check(action != view.body and action != view.theory and action != view.title, context + " never renders source narration or long title")
 	for label in panel.find_children("*", "Label3D", true, false):
 		var width: float = ThemeDB.fallback_font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x * label.pixel_size
@@ -98,7 +98,7 @@ func _render_grid() -> void:
 	if DisplayServer.get_name() == "headless":
 		_check(false, "Visual capture needs a renderer; omit headless")
 		return
-	root.size = Vector2i(1800, 1200)
+	root.size = Vector2i(2200, 1800)
 	var environment := WorldEnvironment.new()
 	var settings := Environment.new()
 	settings.background_mode = Environment.BG_COLOR
@@ -110,19 +110,19 @@ func _render_grid() -> void:
 	camera.position = Vector3(0, 0, 2)
 	camera.look_at(Vector3.ZERO)
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 0.82
+	camera.size = 1.28
 	camera.current = true
 	var guide = Tutorial.new("")
 	guide.start({})
-	for step_index in range(15):
+	for step_index in range(guide.steps.size()):
 		var panel = CalloutPanel.new()
 		root.add_child(panel)
-		panel.position = Vector3((step_index % 3 - 1) * 0.30, (2 - step_index / 3) * 0.14, 0)
+		panel.position = Vector3((step_index % 5 - 2) * 0.26, (3.5 - step_index / 5) * 0.14, 0)
 		panel.configure()
 		guide.index = step_index
 		panel.update_view(guide.view({}))
 		panel.set_target_world_position(panel.global_position - Vector3(0.20, 0.02, 0))
 	for unused in range(5): await process_frame
 	await RenderingServer.frame_post_draw
-	_check(root.get_texture().get_image().save_png(capture_path) == OK, "All fifteen minimal callouts render to QA image")
+	_check(root.get_texture().get_image().save_png(capture_path) == OK, "All course callouts render to QA image")
 	print("TUTORIAL_PANEL_CAPTURE ", capture_path)

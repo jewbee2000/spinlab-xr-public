@@ -1,10 +1,10 @@
 # Operator interaction redesign
 
-Version 0.7.0 separates the physical station, its analyzer, spoken work instructions, and the application menu. User feedback confirmed the v0.6 automatic balancing procedure works much better; that procedure is preserved. This revision replaces the obstructing reading window with minimal local prompts and offline voice. Hardware acceptance of those new visuals, placement, and narration remains pending.
+Version 0.8.0 keeps the physical station, analyzer, contextual spoken guide, and application menu separate. The operator found v0.7.0's speech and small button markers substantially better, but identified overlapping dial labels, missing beginner concepts and micrometer practice, and an empty graph. This revision removes redundant controls, expands the learning experiment, and presents explicit acquired-data plots. Its new placement, reach, and complete lesson need a fresh headset run.
 
 ## Workstation and menu
 
-The default view is the laboratory. Reach with the controller-driven gloves to carry the rotor, lower/latch the guard, turn the micrometers, and press physical station controls. A dedicated monitor presents the measurements and plots. Its placement and larger text replace the dense collection of floating readouts around the fixture.
+The default view is the laboratory. Reach with the controller-driven gloves to carry the rotor, lower/latch the guard, turn the actual probe micrometer and the Mass/Angle dials, and press physical station controls. A dedicated monitor presents the measurements and plots. Its placement and larger text replace the dense collection of floating readouts around the fixture.
 
 The analyzer is a 1.86 × 1.06 m display mounted to the **left of the guard**, centered at station-local `(-1.55, 1.45, -1.20)` m and yawed +50° so its front (+Z) faces the operator. Its center is lower than the former overhead display. The floor stand has a fixed base and overlapping telescopic sections; station height moves the screen without raising the foot off the floor. Readout fonts are larger, and initial/verified field widths are checked against their available columns. Reading the side display requires looking left or walking closer; no headset readability guarantee follows from a desktop render.
 
@@ -18,11 +18,17 @@ If every nearby candidate is obstructed, the prompt **hides**; the target highli
 
 ![Minimal target-adjacent rotor prompt in desktop QA](images/automatic-guide.png)
 
-The confirmed 15-stage balancing procedure is preserved. Its physical-work stages advance after a confirmed action or completed measurement and a 1.5-second success dwell. Rejected actions, partial acquisitions, and a moving/coasting rotor cannot satisfy a completed-measurement stage. Correct quick actions performed during a success message remain ordered evidence for following stages. X opens earlier-stage review and pauses automatic progression until A returns to current work. A remains an optional ready-task shortcut; it cannot invent measurement evidence or operate the apparatus. Start/restart/skip and guide preferences preserve laboratory data. Home, setup changes, a new baseline, or faults still invalidate calibration according to instrument rules.
+The 38-step two-plane course starts with an understandable problem and experiment: off-axis mass creates rotating force; known trial masses reveal measured sensitivity; a calculated correction must be verified. Early tactile tasks teach the actual micrometer, Mass and Angle, editing planes, speed, and safe stopping. The learner reads the time/order plots, measures independent A/B trials, applies a prediction, explores speed response, then finishes with matched-speed verification, repeatability, and a saved report. [TUTORIAL.md](TUTORIAL.md) records the full path.
+
+Accepted work advances immediately when its real completion conditions hold; speech never adds a wait. Entering the next task replaces the current clip. The learner can listen first before acting to hear the full explanation. Held adjustments must be released, guards must latch, and captures must complete analysis/coast-down. X reviews without moving the work checkpoint; A returns forward through review or continues an already ready task. Navigation never operates equipment. After a setup change or fault invalidates post-baseline calibration, the guide directs required recovery/HOME and returns to a fresh baseline and independent trials while retaining historical records.
+
+The sole probe adjustment is the drum on the actual carriage at the station's right side; the front Probe dial and all ± controls were removed. Mass and Angle names/values are printed within their existing circular knob faces, with a small marker on the rim. The STANDOFF display is a compact plaque behind the micrometer. These add no independent mass/angle label panels in front of other controls; glyph fit and hardware sightlines are checked. Release/regrip supports repeated wrist turns. The console provides exactly one physical cap for each operating command, including HOME and SPEED. Readout placement is validated separately from headset readability.
+
+The monitor begins on TIME, automatically selects TIME on ordinary capture and SWEEP for a sweep, and labels missing data rather than inventing a curve. Thick, distinct sensor A/B traces, numerical ticks, a zero reference, and explicit units support comparison. ORDER normalizes DFT frequency by the captured shaft frequency and marks 1×/2×. Stored capture speed governs that plot even if the next test-speed setting changes. See [ANALYZER.md](ANALYZER.md) for axes, data selection, and empty states.
 
 **B or Y opens/closes an explicit menu.** Opening it replaces the simulated gloves with runtime-supplied controller models, supported Capsense hands, and aim pointers. Point and use the trigger to choose menu controls. Menu input has its own collision layer; it must not reach through the menu to actuate physical buttons. Pointer selection and grip acquisition require release/rearming after interruption; fingertip contact requires a fresh front approach after the menu closes. Merely opening the menu does not reset the model or start/stop a measurement.
 
-The menu has exactly three categories: **Balance, Analyze, and Session**. Physical console caps provide the ordinary operating workflow. Session manages the guide. Session includes guide pause/resume, restart, skip lesson, startup preference, walking on/off, report save, recenter, and New Session. Exit through the Quest system menu. Pausing/resuming keeps the current guide page and temporary practice history, while Restart begins it again. B/Y always provides the visible menu transition; holding it does not secretly enable another interaction mode.
+The menu has exactly two categories: **Tools** and **Session**, with the active tab highlighted. Tools contains only sensor disconnect, tachometer loss, exploded/assembled view, and motor sound. Session manages guidance, narration, walking, recentering, and New Session. Ordinary operating commands and SAVE REPORT are available only on the physical console, avoiding a second control surface to learn. Exit through the Quest system menu. B/Y always opens/closes this visible pointer mode.
 
 ## Menu controller models and Capsense hands
 
@@ -30,7 +36,7 @@ The menu prefers the headset's controller model through the pinned OpenXR Vendor
 
 Controller-conforming hands use Meta's Capsense data through `XR_EXT_hand_tracking_data_source` and `XR_EXT_hand_joints_motion_range`. A runtime hand mesh and `XRHandModifier3D` follow the controller-derived joint poses, including capacitive touch behavior, when valid data are available. The overlay is translucent, depth-tested, and visual only. It is hidden outside the menu or when grip/head tracking, focus, mesh readiness, or controller-source joint validity is missing. Optical/unknown hand data cannot substitute for controller poses. The tracked palm hierarchy sits directly under `XROrigin3D`, preventing a second grip transform. [Meta native Capsense](https://developers.meta.com/vr/documentation/native/android/native-capsense/), [vendor runtime model API](https://godotvr.github.io/godot_openxr_vendors/api/class_openxrfbrendermodel.html).
 
-Physical-work mode retains controller-driven gloves. Small letter markers identify the actual Touch buttons without wrist text panels. The menu controller model's alignment, finger placement, and hover behavior remain hardware acceptance items; software geometry and earlier feedback do not establish physical alignment.
+Physical-work mode retains controller-driven gloves. Small letter markers identify the actual Touch buttons without wrist text panels. The operator liked the small v0.7.0 markers and voice presentation. Menu controller alignment, Capsense finger placement, and hover behavior still require their own specific hardware observations; that feedback does not establish every optional runtime feature.
 
 ## Physical button markers
 
@@ -48,12 +54,13 @@ The controller map below documents each button's function. Automatic procedure p
 | Index trigger | Animate the index finger; release it to extend the visible fingertip for physical pressing. | Select a pointed menu control after a fresh release/press. |
 | Side grip | Acquire/release an actual nearby rotor, handle, or dial. | Does not acquire hidden mechanical targets. |
 | Right stick | Walk horizontally relative to head direction when navigation is permitted. | No walking. |
+| Right-stick click | Replay the current spoken explanation. | Use Session → Replay Voice. |
 | Left stick vertical | Adjust station height when no mechanism is held. | No station movement. |
 | Physical index-tip press | Actuate a front-facing physical button once per deliberate approach/withdrawal. | Disabled. |
 
-Chart changes belong to the physical analyzer/station controls and Analyze menu; A/X provide optional guide review; normal progression follows confirmed work. A loose squeeze with no acquired object must not suppress all fingertip presses. Actual held-object state, tracking, and the contact state machine govern whether physical contact is available. The existing front-approach, actuation stroke, shared latch, and withdrawal rules remain in effect.
+Chart changes belong to the physical CHART cap; A/X provide optional guide review; normal progression follows confirmed work. A loose squeeze with no acquired object must not suppress all fingertip presses. Actual held-object state, tracking, and the contact state machine govern whether physical contact is available. The existing front-approach, actuation stroke, shared latch, and withdrawal rules remain in effect.
 
-Desktop review uses M for the explicit menu, 1–3 for its categories, Space for ready-review Next, and Backspace for review Back. Desktop clicks and renders exercise shared command behavior, not stereo or actual Touch pose alignment.
+Desktop review uses M for the explicit menu, 1–2 for its categories, Space for ready-review Next, and Backspace for review Back. Desktop clicks and renders exercise shared command behavior, not stereo or actual Touch pose alignment.
 
 ## Commanded walking
 
@@ -103,10 +110,10 @@ The pure `native/tests/test_navigation.gd` suite checks deadzone/analog strength
 Application and headset acceptance must additionally check:
 
 - B/Y changes only the intended interaction mode; menu pointers cannot activate hidden station buttons, and closing a menu with trigger/grip held requires fresh release.
-- Confirmed work advances after one 1.5-second success cue; incomplete/rejected work does not. The small prompt stays beside the moving target, has no hardware intersection or opaque foreground obstruction, and hides if no safe candidate exists. Spoken instruction/science remains intelligible without onscreen paragraphs. A continues only a ready work/review stage and X reviews.
+- Confirmed work advances immediately without waiting for speech; incomplete/rejected work does not. The small prompt stays beside the moving target, has no hardware intersection or opaque foreground obstruction, and hides if no safe candidate exists. Spoken instruction/science remains intelligible without onscreen paragraphs. A continues only a ready work/review stage and X reviews.
 - Actual loose grip does not disable fingertip buttons; an acquired tool does. Each hand can press, withdraw, carry, latch, and rotate the intended control.
 - Right-stick walking follows head yaw at a consistent speed, stops immediately on neutral/menu/hold/tracking/focus loss, and requires rearming after interruption. Left-stick height cannot raise the room floor or move a held mechanism unexpectedly.
 - The head can travel around the expanded bench rectangle without tunneling, sticky corners, forced elevation, or a sudden recovery snap. Recenter remains explicit and restores a usable operator position.
 - Seated and standing users can disable walking, read the analyzer and short target prompt, hear the spoken task/purpose, reach required controls, and complete a measured balancing exercise. Record the actual APK hash, headset OS/runtime, tracking interruptions, perceived comfort, and sustained foreground performance separately.
 
-The user's v0.6 automatic-procedure confirmation is retained. New v0.7 prompt placement, marker alignment, and voice acceptance remain pending; keep them separate from earlier launch evidence and software test counts.
+The v0.6 automatic-procedure confirmation and positive v0.7.0 feedback on minimal prompts, voice, and markers are retained. The revised v0.8.0 lesson, labels, graph reading, and hardware reach still require a physical run, separate from software test counts.

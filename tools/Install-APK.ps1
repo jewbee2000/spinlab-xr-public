@@ -6,7 +6,7 @@ if(-not (Test-Path -LiteralPath $taskAdb)){$taskAdb=Join-Path $taskRoot '.tools\
 if(-not (Test-Path -LiteralPath $taskAdb)){$taskAdb=(Get-Command adb -ErrorAction Stop).Source}
 $taskSelect=@()
 if($Serial){$taskSelect=@('-s',$Serial)}
-& $taskAdb @taskSelect install -r (Join-Path $taskRoot 'artifacts\SpinLabXR-v0.7.0.apk')
+& $taskAdb @taskSelect install -r (Join-Path $taskRoot 'artifacts\SpinLabXR-v0.8.0.apk')
 if($LASTEXITCODE -ne 0){throw 'Install failed. Enable Developer Mode and approve USB debugging; see docs/APK_SETUP.md.'}
 & $taskAdb @taskSelect shell am start -a android.intent.action.MAIN -c com.oculus.intent.category.VR -n us.teitelbaum.spinlabxr/com.godot.game.GodotAppLauncher
 if($LASTEXITCODE -ne 0){Write-Warning 'Select SpinLab XR under Apps > Unknown Sources in the headset.'}

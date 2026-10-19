@@ -1,20 +1,24 @@
 # Offline tutorial narration
 
-Each of the 15 balancing instructions has one bundled neural-voice recording. It starts with the physical action, then explains the engineering reason. The popup can stay short while the learner hears the fuller explanation. The exact instruction/science transcript is in `native/audio/tutorial/manifest.json` and the generator source.
+The 38-step course has one bundled neural-voice recording per instruction. A clear introduction explains the mission before asking the learner to seat the rotor: reduce the shake caused by off-center mass, using measured responses to known changes rather than guessing a heavy spot. Later recordings introduce probe geometry, correction vectors, two-plane cross effects, interlocks, amplitude and phase, order analysis, independent trials, verification, repeatability, and resonance as the learner uses them.
 
-The voice is Kokoro v1.0 **af_heart**, an American English female synthetic voice, at speed 1.0. Generation runs on the workstation. Quest only plays mono 24 kHz Ogg Vorbis; no TTS model, speech inference, microphone recording, credential, or narration network service is required on the headset.
+Each ordinary instruction has 32–38 spoken words, with 47 words for the introduction. The action and its scientific purpose form one short explanation; the popup only needs a few words. The current set contains **38 clips**, totaling **562.24 seconds** and **3,761,646 bytes**. Recordings last **11.53–17.48 seconds**. The exact transcript is retained in `native/audio/tutorial/manifest.json` and `tools/Generate-TutorialNarration.py`. The full physical learning path is in [TUTORIAL.md](TUTORIAL.md).
 
-The generated set contains 15 clips totaling **309.28 seconds** and **2,064,545 bytes**. Individual recordings last 17.53–24.93 seconds. Each contains 44–56 spoken words; scientific symbols and units are written out for speech.
+The voice is Kokoro v1.0 **af_heart**, an American English female synthetic voice, at speed 1.0. Generation runs locally on the workstation. Quest only plays mono 24 kHz Ogg Vorbis. No TTS model, speech inference, microphone recording, credential, or narration service is required on the headset.
 
 ## Playback and controls
 
-Narration follows the active instruction. The application waits for enabled narration to finish before consuming the automatic success dwell, so fast completed work does not cut off its explanation. Opening the menu or losing input focus pauses playback. Changing/restarting the instruction stops the previous clip; returning from a paused guide can start that instruction again. Voice OFF removes the audio wait while retaining actual-work gates.
+Narration follows the current target. **Completing the task advances immediately, even while speech is playing.** The previous recording stops and the next instruction starts; old instructions never queue or overlap. Listen before acting to hear the full explanation. Waiting for speech is optional and never supplies completion evidence.
 
-Use **Session → Voice: On/Off** for the persistent preference and **Replay Voice** to hear the current instruction again. With the menu closed, clicking the **right stick** also replays it. Replay does not operate the laboratory or satisfy a work objective. The minimal callout, progress hint, and physical target remain available when voice is off.
+Some objectives require a finished outcome: release a dial after turning it, latch and release the guard, or wait for a new capture to finish analysis and coast to zero. Narration duration does not add another wait to those real requirements. Voice OFF changes only audio, leaving the same work gates.
+
+Opening the menu or losing input focus pauses playback in place. Returning from a paused guide starts that instruction again; changing, skipping, restarting, or reviewing an instruction replaces its clip. Use **Session → Voice: On/Off** for the persistent preference and **Replay Voice** to hear the current explanation again. With the menu closed, clicking the **right stick** also replays it. Replay does not operate equipment or satisfy an objective. Motor sonification has a separate control.
+
+The minimal callout and physical target highlight remain available with voice off. The app does not display the long transcript over the station; the repository transcript allows it to be reviewed separately.
 
 ## Generate or revise recordings
 
-Generation is separate from normal APK builds. Existing clips are committed, so building/installing the app does not download a model or run Python inference. Python 3.10–3.13 is supported by the pinned wrapper. From PowerShell at the repository root:
+Generation is separate from normal APK builds. Committed clips allow builds and installation without model downloads or Python inference. Python 3.10–3.13 is supported by the pinned wrapper. From PowerShell at the repository root:
 
 ```powershell
 python -m venv .tools/narration-venv
@@ -23,20 +27,22 @@ python -m venv .tools/narration-venv
 & .tools/narration-venv/Scripts/python.exe tools/Generate-TutorialNarration.py --verify
 ```
 
-The generator downloads the pinned approximately 326 MB model and 28 MB voice bundle only if missing or incorrect, checks the published SHA256 values, and stores them under ignored `.tools/narration`. The environment is ignored too. A tutorial-ID mismatch fails explicitly instead of leaving new stages unnarrated.
+The generator downloads the pinned approximately 326 MB model and 28 MB voice bundle only when missing or incorrect, checks published SHA256 values, and stores them under ignored `.tools/narration`. The generation environment is ignored too. A mismatch between tutorial IDs and spoken scripts fails explicitly rather than leaving new stages unnarrated.
 
-Edit the spoken scripts in `tools/Generate-TutorialNarration.py`, then regenerate all clips or use `--only guard solve` to replace selected recordings. Each script puts the action before its purpose. Scientific speech is spelled out: “micrometers peak,” “square root of two,” “alpha,” “once per revolution,” and “quarter gram.” The generator applies safe peak scaling, short fades and endpoint silence, then encodes Ogg using bounded writes. This avoids a Windows libsndfile stack overflow encountered when encoding a long utterance in one call.
+Edit the spoken scripts in `tools/Generate-TutorialNarration.py`, then regenerate all clips or use `--only guard solve` for selected recordings. Ordinary scripts use a physical action and one plain-language reason. The introduction supplies context before the first action. Scientific units are written for speech: “micrometers peak,” “a tenth of a millimeter,” “quarter gram,” and “once per revolution.” The generator applies safe peak scaling, short endpoint fades and silence, then encodes Ogg with bounded writes. This avoids a Windows libsndfile stack overflow encountered when encoding a long utterance in one native call.
 
-`--verify` checks ordered stage coverage, hashes, mono/sample rate, finite decoded samples, measured duration, clipping and near-silence. The manifest records inference/encoding package versions and output hashes; use committed files when exact release bytes matter. Generation dependencies are unnecessary on CI or Quest when using existing audio.
+`--verify` checks ordered stage coverage, exact transcript equality with the generator source, audio hashes, mono/sample rate, finite decoded samples, measured duration, aggregate duration/size, clipping and near-silence. Changing a script while keeping an old recording is detected. The manifest records inference/encoding package versions and file hashes; committed files are the reference when exact release bytes matter. Generation dependencies are unnecessary on CI or Quest when using existing audio.
 
 ## Sources and terms
 
-Kokoro's model/voice release is Apache-2.0; the `kokoro-onnx` wrapper is MIT. Upstream licenses do not replace the project's own terms. Notices and complete upstream licenses are retained beside the clips in `PROVENANCE.txt`, `LICENSE-KOKORO-APACHE-2.0.txt` and `LICENSE-KOKORO-ONNX-MIT.txt`. Build-time phonemization/inference/encoding dependencies stay in the local environment and are not shipped in the APK.
+Kokoro's model/voice release is Apache-2.0; the `kokoro-onnx` wrapper is MIT. Upstream licenses do not replace the project's own terms. Notices and complete upstream licenses are retained beside the clips in `PROVENANCE.txt`, `LICENSE-KOKORO-APACHE-2.0.txt` and `LICENSE-KOKORO-ONNX-MIT.txt`. Build-time phonemization/inference/encoding dependencies remain in the local environment and are not shipped in the APK.
 
-The local phonemization toolchain includes **GPL-3.0 phonemizer and espeak-ng**. The MIT `espeakng-loader` wrapper loads that separate engine; espeak supplies phonemes, while Kokoro produces the neural voice. SoundFile is BSD-3-Clause and its encoding library libsndfile is LGPL-2.1. Complete GPL/LGPL texts are retained as generation-tool reference notices beside the clips. These libraries and executables are absent from the Quest runtime. [Phonemizer license](https://github.com/bootphon/phonemizer/blob/master/LICENSE), [espeak-ng license](https://github.com/espeak-ng/espeak-ng/blob/master/COPYING), [libsndfile license](https://github.com/libsndfile/libsndfile/blob/master/COPYING).
+The local phonemization toolchain includes **GPL-3.0 phonemizer and espeak-ng**. The MIT `espeakng-loader` wrapper loads that separate engine; espeak supplies phonemes, while Kokoro produces the neural voice. SoundFile is BSD-3-Clause and libsndfile is LGPL-2.1. Complete GPL/LGPL texts are retained as generation-tool reference notices beside the clips. These libraries and executables are absent from the Quest runtime. [Phonemizer license](https://github.com/bootphon/phonemizer/blob/master/LICENSE), [espeak-ng license](https://github.com/espeak-ng/espeak-ng/blob/master/COPYING), [libsndfile license](https://github.com/libsndfile/libsndfile/blob/master/COPYING).
 
 Primary references: [Kokoro model card](https://huggingface.co/hexgrad/Kokoro-82M), [voice catalog](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md), [wrapper/setup](https://github.com/thewh1teagle/kokoro-onnx), [pinned model assets](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.1), [wrapper license](https://github.com/thewh1teagle/kokoro-onnx/blob/3596b26764286a7de9d90c363e988d50578918e5/LICENSE).
 
 ## Acceptance
 
-The spoken scripts received a scientific wording review. Decoding, levels, duration, hashes and Godot import checks establish usable files; perceived naturalness and pronunciation require listening. The available agent audio-input path cannot listen to these recordings. On Quest, check clear units, no abrupt cuts, comfortable volume, no overlapping stages, pause/replay behavior, and automatic progression. Record the exact APK and voice preference with feedback. Motor sonification and narration use separate controls.
+The operator described v0.7.0's spoken guidance and minimal prompts as substantially better, then asked for clearer beginner context and more complete interactive coverage. The revised course keeps that presentation while replacing the transcripts and removing audio-dependent progression.
+
+Scientific wording, decoding, levels, duration, hashes, and Godot imports establish the intended content and usable files. They cannot establish perceived naturalness or pronunciation without listening. On Quest, check the new explanations, comfortable volume, intentional immediate replacement when work is completed, no overlapping voices, replay/pause behavior, and target matching. Record the APK and voice preference with feedback. Exact automated results belong in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md).

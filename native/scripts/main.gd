@@ -14,7 +14,8 @@ const CapsenseHand = preload("res://scripts/controller_capsense_hand.gd")
 const Navigation = preload("res://scripts/operator_navigation.gd")
 const Narrator = preload("res://scripts/tutorial_narrator.gd")
 const CalloutPlacement = preload("res://scripts/target_callout_placement.gd")
-const APP_VERSION = "0.7.0"
+const AnalyzerView = preload("res://scripts/analyzer_view.gd")
+const APP_VERSION = "0.8.0"
 const TEAL = Color("6ce5c9")
 const INK = Color("e6f1f5")
 const DIM = Color("9db7c6")
@@ -29,8 +30,8 @@ var controls := Node3D.new()
 var buttons: Array = []
 var readouts: Dictionary = {}
 var chart
-var chart_kind := "sweep"
-var tab := "balance"
+var chart_kind := "time"
+var tab := "session"
 var status := "Welcome. Load the rotor, home the probe, and close the guard."
 var coach := true
 var exploded := false
@@ -91,6 +92,7 @@ var motion_armed := false
 var height_armed := false
 var guide_marker: MeshInstance3D
 var guide_step_id := ""
+var last_record_count := 0
 var guide_paused := false
 ## Optional override for deterministic controller/navigation tests.
 var head_tracking_override = null
@@ -111,12 +113,12 @@ func _ready() -> void:
 	geometry.get_node("Workshop").reparent(self,true)
 	kit_home=geometry.kit_rotor.transform
 	_setup_xr()
-	_build_controls()
-	_build_instrument()
-	_build_dials()
 	narrator=Narrator.new();add_child(narrator)
 	narrator.configure("res://audio/tutorial/manifest.json",narration_settings_path)
 	if not narration_enabled:narrator.set_enabled(false)
+	_build_controls()
+	_build_instrument()
+	_build_dials()
 	_build_guide()
 	_build_desktop_hud()
 	_setup_sound()
@@ -126,7 +128,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture="): capture_path=arg.trim_prefix("--capture=")
 		if arg=="--showcase":
-			model.mount_rotor();model.home_probe();model.toggle_guard();model.begin_run("sweep")
+			model.mount_rotor();model.home_probe();model.toggle_guard();chart_kind="sweep";model.begin_run("sweep")
 	_update_ui()
 	print("SPINLAB_NATIVE_READY version=",APP_VERSION," xr=",xr_active," input=direct-hands scientific=single,two-plane,tach-LS,resonance,repeatability")
 
@@ -242,11 +244,11 @@ func _button(parent: Node3D, caption: String, command: String, pos: Vector3, wid
 func _build_controls() -> void:
 	add_child(controls)
 	control_backplate=_box(controls,Vector3(0.88,0.80,0.028),Vector3(0,-0.035,0),Color("132634"))
-	_label(controls,"STATION CONTROLS",Vector3(-0.39,0.335,0.024),27,0.00059,TEAL)
-	for i in range(3):
-		var keys=["balance","diagnostic","session"]
-		var titles=["BALANCE","ANALYZE","SESSION"]
-		menu_tab_buttons[keys[i]]=_button(controls,titles[i],"tab:"+keys[i],Vector3(-0.27+i*0.27,0.255,0.027),0.25,0.055)
+	_label(controls,"SPINLAB MENU",Vector3(-0.39,0.335,0.024),27,0.00059,TEAL)
+	for i in range(2):
+		var keys=["diagnostic","session"]
+		var titles=["TOOLS","SESSION"]
+		menu_tab_buttons[keys[i]]=_button(controls,titles[i],"tab:"+keys[i],Vector3(-0.205+i*0.41,0.255,0.027),0.39,0.055)
 	_button(controls,"B / Y   CLOSE MENU","menu:close",Vector3(0,-0.365,0.029),0.78,0.055)
 	_rebuild_menu()
 
@@ -256,9 +258,8 @@ func _rebuild_menu() -> void:
 		if button.get_meta("menu",false):buttons.erase(button);button.queue_free()
 	var items: Array=[]
 	match tab:
-		"balance":items=[["FIT KNOWN TRIAL +0.250 g","fit_trial"],["MEASURE TRIAL · PLANE A","trial_a"],["MEASURE TRIAL · PLANE B","trial_b"],["SOLVE INFLUENCE MATRIX","solve"],["FIT CALCULATED CORRECTION","apply"],["VERIFY CORRECTED ROTOR","verify"],["REPEATABILITY · THREE RUNS","repeat"],["ACTIVE PLANE: A / B","plane"]]
-		"diagnostic":items=[["RUN RESONANCE SPEED SWEEP","sweep"],["CHART: TIME / ORDER / SWEEP","chart"],["TEST SPEED: 900 /1200 /1500","speed"],["INJECT SENSOR DISCONNECT","fault_sensor"],["INJECT TACHOMETER LOSS","fault_tach"],["EXPLODE / ASSEMBLE FIXTURE","explode"],["MOTOR SONIFICATION: ON/OFF","sound"],["GUIDED COACH: ON / OFF","coach"]]
-		"session":items=[["SAVE TRACEABLE JSON REPORT","save"],["PAUSE / RESUME FLOATING GUIDE","tutorial:toggle"],["RESTART FLOATING GUIDE","tutorial:restart"],["SKIP CURRENT GUIDE LESSON","tutorial:skip_step"],["GUIDE AT STARTUP: ON/OFF","tutorial:startup"],["RECENTER AT WORKBENCH","recenter"],["JOYSTICK WALKING: ON/OFF","walk_toggle"],["NEW SESSION · RESET LAB","new"]]
+		"diagnostic":items=[["SIMULATE SENSOR DISCONNECT","fault_sensor"],["SIMULATE TACHOMETER LOSS","fault_tach"],["EXPLODE / ASSEMBLE FIXTURE","explode"],["MOTOR SOUND: ON/OFF","sound"]]
+		"session":items=[["PAUSE / RESUME FLOATING GUIDE","tutorial:toggle"],["RESTART FLOATING GUIDE","tutorial:restart"],["SKIP CURRENT GUIDE LESSON","tutorial:skip_step"],["GUIDE AT STARTUP: ON/OFF","tutorial:startup"],["RECENTER AT WORKBENCH","recenter"],["JOYSTICK WALKING: ON/OFF","walk_toggle"],["NEW SESSION · RESET LAB","new"]]
 	for i in items.size():
 		var caption=str(items[i][0])
 		if items[i][1]=="tutorial:startup":caption="GUIDE AT STARTUP: "+("ON" if tutorial.startup_enabled else "OFF")
@@ -335,16 +336,17 @@ func _build_instrument() -> void:
 	_box(monitor,Vector3(0.074,0.62,0.06),Vector3(0,-0.57,-0.08),Color("536c7b"))
 	_label(monitor,"SPINLAB  /  TACH-SYNCHRONOUS ANALYZER",Vector3(-0.84,0.45,0.034),30,0.00074,TEAL)
 	readouts["speed"]=_label(monitor,"0 RPM",Vector3(-0.84,0.35,0.034),50,0.00080)
+	readouts["target_speed"]=_label(monitor,"",Vector3(-0.84,0.275,0.034),22,0.00050,DIM)
 	readouts["amplitude"]=_label(monitor,"",Vector3(-0.84,0.23,0.034),32,0.00072)
 	readouts["phase"]=_label(monitor,"",Vector3(-0.84,0.15,0.034),26,0.00065,DIM)
 	readouts["quality"]=_label(monitor,"",Vector3(-0.84,0.04,0.034),28,0.00065,DIM)
 	readouts["solution"]=_label(monitor,"",Vector3(-0.84,-0.08,0.034),28,0.00066)
 	readouts["result"]=_label(monitor,"",Vector3(-0.84,-0.21,0.034),28,0.00066,TEAL)
 	readouts["chart"]=_label(monitor,"",Vector3(0.03,0.34,0.034),24,0.00062,TEAL)
-	chart=Chart3D.new();chart.width_m=0.76;chart.height_m=0.43;chart.position=Vector3(0.035,-0.16,0.034);monitor.add_child(chart)
-	readouts["axis"]=_label(monitor,"",Vector3(0.035,-0.19,0.034),23,0.00060,DIM)
+	chart=Chart3D.new();chart.width_m=0.68;chart.height_m=0.36;chart.position=Vector3(0.10,-0.12,0.034);monitor.add_child(chart)
+	readouts["axis"]=_label(monitor,"",Vector3(0.10,-0.19,0.034),19,0.00048,DIM)
 	readouts["status"]=_label(monitor,"",Vector3(-0.84,-0.33,0.034),26,0.00060,DIM)
-	readouts["coach"]=_label(monitor,"",Vector3(-0.84,-0.405,0.034),25,0.00058,TEAL)
+	readouts["coach"]=_label(monitor,"",Vector3(-0.84,-0.425,0.034),20,0.00048,TEAL)
 	readouts["hands"]=_label(station,"B/Y MENU  ·  GUIDE ADVANCES AUTOMATICALLY  ·  X REVIEW\nLEFT STICK HEIGHT  ·  RIGHT STICK WALK / CLICK REPLAY",Vector3(-0.73,0.49,-0.89),23,0.00055,TEAL)
 
 func _build_guide() -> void:
@@ -359,6 +361,9 @@ func _guide_target(view: Dictionary) -> Node3D:
 		"rotor","mount":target=geometry.rotor_grab
 		"guard":target=geometry.guard_handle
 		"dial:probe":target=geometry.probe_grab
+		"dial:mass":target=dial_nodes.get("mass")
+		"dial:angle":target=dial_nodes.get("angle")
+		"analyzer":target=monitor
 	return target
 
 func _guide_obstacles(opaque_only: bool = false) -> Dictionary:
@@ -370,6 +375,8 @@ func _guide_target_bounds(target: Node3D) -> AABB:
 	var bounds=target.global_transform*AABB(Vector3(-0.035,-0.035,-0.02),Vector3(0.07,0.07,0.04))
 	if target==geometry.rotor_grab:
 		for bound in CalloutPlacement.collect_world_aabbs(geometry.kit_rotor).bounds:bounds=bounds.merge(bound)
+	elif target==geometry.probe_grab:
+		for bound in CalloutPlacement.collect_world_aabbs(geometry.probe.get_node("MicrometerDrum")).bounds:bounds=bounds.merge(bound)
 	elif target==geometry.guard_handle:
 		for mesh in geometry.guard.find_children("*","MeshInstance3D",true,false):
 			if str(mesh.name).begins_with("GuardHandle") or str(mesh.name).begins_with("HandleBracket"):
@@ -401,25 +408,36 @@ func _place_guide() -> void:
 		tutorial_panel.set_target_world_position(target.global_position)
 	tutorial_panel.set_panel_active(bool(guide_placement.visible))
 
+func _dial_readout(parent: Node3D, key: String, at: Vector3, width: float = 0.25) -> void:
+	# A fixed, bounded readout above its own mechanism, never floating over caps.
+	var plaque=Node3D.new();plaque.name=key.capitalize()+"Readout";parent.add_child(plaque);plaque.position=at
+	_box(plaque,Vector3(width,0.055,0.012),Vector3.ZERO,Color("10232f"))
+	var label=_label(plaque,"",Vector3(-width/2+0.008,0.020,0.008),16,0.00055,TEAL)
+	label.name="ValueLabel";label.set_meta("max_width_m",width-0.016);label.set_meta("min_y_m",-0.024)
+	readouts[key]=label
+
 func _build_dials() -> void:
-	for i in range(3):
-		var kinds=["probe","mass","angle"]
-		var knob=StaticBody3D.new();knob.set_meta("action","dial:"+kinds[i]);knob.set_meta("dial",kinds[i])
-		knob.set_meta("grab_kind","dial")
-		dial_nodes[kinds[i]]=knob
-		knob.position=Vector3(-0.25+i*0.25,1.02,-0.84);station.add_child(knob)
+	# Probe adjustment belongs solely to the real carriage micrometer.
+	_dial_readout(geometry.probe,"probe",Vector3(0.28,0.205,-0.10),0.14)
+	for i in range(2):
+		var kind=["mass","angle"][i]
+		var knob=StaticBody3D.new();knob.name=kind.capitalize()+"Adjustment";knob.set_meta("action","dial:"+kind);knob.set_meta("dial",kind)
+		knob.set_meta("grab_kind","dial");dial_nodes[kind]=knob
+		knob.position=Vector3(-0.16+i*0.32,0.97,-1.01);station.add_child(knob)
 		var mesh=MeshInstance3D.new();var cyl=CylinderMesh.new();cyl.top_radius=0.047;cyl.bottom_radius=0.047;cyl.height=0.045;cyl.radial_segments=24;mesh.mesh=cyl;mesh.rotation.x=PI/2;mesh.material_override=_material(Color("426777"));knob.add_child(mesh)
 		var shape=CollisionShape3D.new();var sphere=SphereShape3D.new();sphere.radius=0.060;shape.shape=sphere;knob.add_child(shape)
-		var tick=_box(knob,Vector3(0.004,0.026,0.004),Vector3(0,0.022,0.025),TEAL)
-		knob.set_meta("tick",tick)
-		readouts[kinds[i]]=_label(station,"",knob.position+Vector3(-0.10,-0.095,0.025),25,0.00056,TEAL)
-		_button(station,"−", "nudge:"+kinds[i]+":-1",knob.position+Vector3(-0.077,-0.15,0),0.07,0.045)
-		_button(station,"+", "nudge:"+kinds[i]+":1",knob.position+Vector3(0.077,-0.15,0),0.07,0.045)
+		var tick=_box(knob,Vector3(0.004,0.006,0.004),Vector3(0,0.041,0.025),TEAL);knob.set_meta("tick",tick)
+		# Read the value on the knob itself; no floating silhouette can mask
+		# another actuator, the loading tray, or the micrometer behind it.
+		var label=_label(knob,"",Vector3(0,0.020,0.0228),18,0.00055,INK)
+		label.name="ValueLabel";label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+		label.set_meta("max_width_m",0.078);label.set_meta("min_y_m",-0.033);label.set_meta("face_radius_m",0.047)
+		readouts[kind]=label
 
 func _build_desktop_hud() -> void:
 	if xr_active:return
 	var layer=CanvasLayer.new();add_child(layer)
-	var label=Label.new();label.text="SPINLAB XR  /  NATIVE ENGINEERING LAB    v"+APP_VERSION+"\nDrag right mouse to orbit · Wheel to zoom · Click world controls · M menu · 1/2/3 tabs · Space guide next · Backspace guide back"
+	var label=Label.new();label.text="SPINLAB XR  /  NATIVE ENGINEERING LAB    v"+APP_VERSION+"\nDrag right mouse to orbit · Wheel to zoom · Click world controls · M menu · 1/2 tabs · Space guide next · Backspace guide back"
 	label.position=Vector2(24,18);label.add_theme_font_size_override("font_size",18);label.modulate=TEAL;layer.add_child(label)
 	desktop_status=Label.new();desktop_status.position=Vector2(24,930);desktop_status.add_theme_font_size_override("font_size",16);desktop_status.modulate=DIM;layer.add_child(desktop_status)
 	var hud=HBoxContainer.new();hud.position=Vector2(24,90);layer.add_child(hud)
@@ -439,7 +457,7 @@ func _action(command: String, input_kind: String="") -> void:
 		_update_ui();return
 	if command.begins_with("tab:"):
 		tab=command.trim_prefix("tab:")
-		if tab not in ["balance","diagnostic","session"]:tab="balance"
+		if tab not in ["diagnostic","session"]:tab="session"
 		tutorial.observe(_tutorial_context(),{"command":command,"ok":true,"input_kind":input_kind})
 		_rebuild_menu();_update_ui();return
 	if command.begins_with("nudge:"):
@@ -449,7 +467,9 @@ func _action(command: String, input_kind: String="") -> void:
 		"mount":result={"ok":true,"message":"Rotor is already mounted."} if model.mounted else model.mount_rotor()
 		"home":result=model.home_probe()
 		"guard":result=model.toggle_guard();geometry.guard_preview=-1.0
-		"baseline","trial_a","trial_b","verify","sweep","repeat":result=model.begin_run(command)
+		"baseline","trial_a","trial_b","verify","sweep","repeat":
+			result=model.begin_run(command)
+			if result.ok:chart_kind="sweep" if command=="sweep" else "time"
 		"stop":result=model.stop()
 		"estop":result=model.emergency_stop()
 		"recover":result=model.release_estop() if model.estop else model.reset_fault()
@@ -465,13 +485,12 @@ func _action(command: String, input_kind: String="") -> void:
 		"speed":result=model.set_test_speed(1200 if model.test_rpm==900 else 1500 if model.test_rpm==1200 else 900)
 		"chart":chart_kind="time" if chart_kind=="sweep" else "order" if chart_kind=="time" else "sweep";result.message="Analyzer view: "+chart_kind
 		"explode":exploded=not exploded;geometry.set_exploded(exploded);result.message="Exploded teaching view" if exploded else "Assembled operating view"
-		"coach":coach=not coach;result.message="Guided coach enabled" if coach else "Expert mode: use measured amplitude and phase."
 		"sound":sound_on=not sound_on;result.message="Motor sonification enabled" if sound_on else "Motor sonification muted"
 		"save":_save_report();return
 		"new":
 			result=model.reset()
 			if result.ok:
-				_cancel_hand_interactions();active_plane=0;geometry.guard_preview=-1.0;saved_path="";narrator.current_id=""
+				_cancel_hand_interactions();active_plane=0;geometry.guard_preview=-1.0;saved_path="";narrator.current_id="";chart_kind="time"
 		"lower":_cancel_hand_interactions();station.position.y=clampf(station.position.y-0.1,-0.5,0.3);result.message="Station lowered."
 		"raise":_cancel_hand_interactions();station.position.y=clampf(station.position.y+0.1,-0.5,0.3);result.message="Station raised."
 		"distance":_cancel_hand_interactions();station_distance=0.82 if station_distance<0.70 and station_distance>0.60 else 0.45 if station_distance>0.70 else 0.65;station.position.z=station_distance;result.message="Bench reach adjusted. Withdraw your hand before the next press."
@@ -496,14 +515,15 @@ func _dial_value(kind: String) -> float:
 	return float(model.sensor_position_mm) if kind=="probe" else float(model.masses[active_plane]) if kind=="mass" else float(model.angles[active_plane])
 
 func _tutorial_context() -> Dictionary:
-	return {"mounted":model.mounted,"homed":model.homed,"guard_closed":model.guard_closed,"estop":model.estop,"fault":model.fault,"rpm":model.rpm,"running":model.running,"processing":model.processing,"sensor_position_mm":model.sensor_position_mm,"masses":model.masses.duplicate(),"angles":model.angles.duplicate(),"mode":model.mode,"active_plane":active_plane,"test_rpm":model.test_rpm,"radius_mm":model.radius_mm,"records":model.records,"baseline":model.baseline,"trial_a":model.trial_a,"trial_b":model.trial_b,"solution":model.solution,"latest":model.latest,"tab":tab,"chart_kind":chart_kind,"reach_assist":reach_assist,"exploded":exploded,"sound_on":sound_on,"coach":coach,"saved_report":not saved_path.is_empty() and FileAccess.file_exists(saved_path),"grab_owners_empty":grab_owners.is_empty(),"menu_open":menu_open,"walk_distance_m":walk_distance_m,"height_changed":height_changed}
+	return {"mounted":model.mounted,"homed":model.homed,"guard_closed":model.guard_closed,"estop":model.estop,"fault":model.fault,"rpm":model.rpm,"running":model.running,"processing":model.processing,"sensor_position_mm":model.sensor_position_mm,"masses":model.masses.duplicate(),"angles":model.angles.duplicate(),"mode":model.mode,"active_plane":active_plane,"test_rpm":model.test_rpm,"radius_mm":model.radius_mm,"records":model.records,"baseline":model.baseline,"trial_a":model.trial_a,"trial_b":model.trial_b,"solution":model.solution,"latest":model.latest,"tab":tab,"chart_kind":chart_kind,"reach_assist":reach_assist,"exploded":exploded,"sound_on":sound_on,"coach":coach,"saved_report":not saved_path.is_empty() and FileAccess.file_exists(saved_path),"grab_owners_empty":grab_owners.is_empty(),"menu_open":menu_open,"walk_distance_m":walk_distance_m,"height_changed":height_changed,"waveform_count":model.waveform.size(),"spectrum_count":model.spectrum.size(),"sweep_count":model.sweep_points.size(),"running_kind":model.run_kind}
 
 func _refresh_tutorial() -> void:
 	if tutorial==null or not is_instance_valid(tutorial_panel):return
 	var view=tutorial.view(_tutorial_context())
 	view.display_state="Measuring" if model.running else "Analyzing" if model.processing else "Coasting" if model.rpm>0.1 else "Wait" if model.fault!="" or model.estop else ""
 	tutorial_panel.update_view(view)
-	if view.id!=guide_step_id:guide_step_id=view.id;guide_candidate=-1
+	var prompt_key=str(view.get("prompt_id",view.id))+":"+str(view.target)
+	if prompt_key!=guide_step_id:guide_step_id=prompt_key;guide_candidate=-1
 	guide_marker.visible=false
 	for button in buttons:
 		if is_instance_valid(button):button.guide_highlight=false
@@ -581,6 +601,13 @@ func _update_ui() -> void:
 	var t=model.telemetry()
 	readouts.speed.text="%d RPM   /   %s"%[roundi(model.rpm),model.mode.replace("_"," ").to_upper()]
 	var amps=t.get("amplitudes_um",[0.0,0.0]);var phases=t.get("phases_deg",[0.0,0.0])
+	readouts.target_speed.text="TEST SETPOINT %d RPM"%roundi(model.test_rpm)
+	geometry.physical_by_action.speed.set_caption("SPEED\n%d RPM"%roundi(model.test_rpm))
+	geometry.physical_by_action.mode.set_caption("MODE\n"+("TWO PLANE" if model.mode=="two_plane" else "SINGLE"))
+	geometry.physical_by_action.plane.set_caption("PLANE "+("A" if active_plane==0 else "B"))
+	geometry.physical_by_action.recover.set_caption("RECOVER\n"+("RELEASE" if model.estop else "RESET" if not model.fault.is_empty() else ""))
+	geometry.physical_by_action.trial_b.set_enabled(model.mode=="two_plane")
+	geometry.physical_by_action.plane.set_enabled(model.mode=="two_plane")
 	readouts.amplitude.text="A: %.3f µm    B: %.3f µm"%[float(amps[0]),float(amps[1])]
 	var observable=t.get("phase_observable",[true,true])
 	var phase_a="%.1f°"%float(phases[0]) if observable[0] else "--"
@@ -588,15 +615,15 @@ func _update_ui() -> void:
 	readouts.phase.text="Phase A %s / B %s   ·  1× peak"%[phase_a,phase_b]
 	readouts.coach.text=_wrap_text(_coach_text(t),100)
 	readouts.status.text=_wrap_text(status,113)
-	readouts.probe.text="PROBE\n%.2f mm"%model.sensor_position_mm
+	readouts.probe.text="STANDOFF\n%.2f mm"%model.sensor_position_mm
 	readouts.mass.text="MASS %s\n%.3f g"%["A" if active_plane==0 else "B",model.masses[active_plane]]
-	readouts.angle.text="ANGLE\n%.1f°"%model.angles[active_plane]
+	readouts.angle.text="ANGLE %s\n%.1f°"%["A" if active_plane==0 else "B",model.angles[active_plane]]
 	for kind in dial_nodes:
 		var knob=dial_nodes[kind]
 		var value=_dial_value(kind)
 		var turns=value/0.5 if kind=="probe" else value/0.5 if kind=="mass" else value/360.0
 		var tick=knob.get_meta("tick")
-		tick.position=Vector3(-sin(turns*TAU)*0.022,cos(turns*TAU)*0.022,0.025)
+		tick.position=Vector3(-sin(turns*TAU)*0.041,cos(turns*TAU)*0.041,0.025)
 		tick.rotation.z=turns*TAU
 	readouts.result.text=("E-STOP LATCHED") if model.estop else ("FAULT · "+model.fault.to_upper()) if model.fault!="" else "ANALYZING / TACH LS + DFT" if model.processing else "ACQUIRING %d%%"%roundi(t.get("run_progress",0.0)*100) if model.running else "COASTING / KEEP GUARD CLOSED" if model.rpm>0.1 else "ZERO SPEED / DRIVE INHIBITED" if not model.guard_closed else "READY / GUARDED"
 	var noise=float(model.latest.get("noise_rms_um",0))
@@ -621,33 +648,10 @@ func _wrap_text(text: String, columns: int) -> String:
 	return out+line
 
 func _update_chart() -> void:
-	var points: Array=[]
-	var max_y=1.0;var max_x=1800.0;var min_y=0.0
-	if chart_kind=="time":
-		var samples=model.waveform
-		for i in samples.size():
-			var v=samples[i]
-			var value=float(v.get("value",v.get("y",0))) if v is Dictionary else float(v.y) if v is Vector2 else float(v)
-			points.append(Vector2(float(i)/1024.0,value));max_y=maxf(max_y,absf(value)*1.1)
-		min_y=-max_y;max_x=maxf(float(samples.size())/1024.0,0.001)
-		readouts.chart.text="RAW SENSOR / waveform + noise [µm]"
-		readouts.axis.text="0 s                 TIME                  %.2f s"%max_x
-	elif chart_kind=="order":
-		for i in model.spectrum.size():
-			var p=model.spectrum[i]
-			var x=float(p.get("frequency_hz",p.get("frequency",i))) if p is Dictionary else float(p.x) if p is Vector2 else float(i)
-			var y=float(p.get("amplitude_um",p.get("amplitude",0))) if p is Dictionary else float(p.y) if p is Vector2 else float(p)
-			points.append(Vector2(x,y));max_y=maxf(max_y,y*1.1)
-		max_x=100.0;readouts.chart.text="ORDER DIAGNOSTIC / DFT amplitude [µm]"
-		readouts.axis.text="0 Hz        1× = %.1f Hz            100 Hz"%(model.test_rpm/60.0)
-	else:
-		for p in model.sweep_points:
-			var value=float(p.get("amplitude_um",p.get("amplitude",0))) if p is Dictionary else float(p.y)
-			var rpm_value=float(p.get("rpm",0)) if p is Dictionary else float(p.x)
-			points.append(Vector2(rpm_value,value));max_y=maxf(max_y,value*1.1)
-		readouts.chart.text="RESONANCE SWEEP / 1× peak [µm]"
-		readouts.axis.text="0        600        1200       1800 RPM"
-	chart.set_points(points,0,max_x,min_y,max_y)
+	var view=AnalyzerView.build(chart_kind,model.waveform,model.spectrum,model.sweep_points,model.records,{"running":model.running,"processing":model.processing,"run_kind":model.run_kind,"rpm":model.rpm,"fault":model.fault,"estop":model.estop})
+	readouts.chart.text=view.title
+	readouts.axis.text=view.x_unit+"\n"+view.footer
+	chart.set_view(view)
 
 func _save_report() -> void:
 	var stamp=Time.get_datetime_string_from_system().replace(":","-")
@@ -1008,7 +1012,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if not hit.is_empty() and hit.collider.is_visible_in_tree() and (not hit.collider is LabButton or hit.collider.enabled):_action(str(hit.collider.get_meta("action","")))
 	if event is InputEventMouseMotion and mouse_drag:desktop_yaw-=event.relative.x*0.004;desktop_pitch=clampf(desktop_pitch-event.relative.y*0.003,-0.9,0.15);_desktop_camera()
 	if event is InputEventKey and event.pressed:
-		if event.keycode in [KEY_1,KEY_2,KEY_3]:_action("tab:"+["balance","diagnostic","session"][event.keycode-KEY_1])
+		if event.keycode in [KEY_1,KEY_2]:_action("tab:"+["diagnostic","session"][event.keycode-KEY_1])
 		if event.keycode==KEY_M:_set_menu_open(not menu_open)
 		if event.keycode==KEY_SPACE:_tutorial_action("tutorial:next")
 		if event.keycode==KEY_BACKSPACE:_tutorial_action("tutorial:back")
@@ -1039,9 +1043,13 @@ func _process(delta: float) -> void:
 			if menu_open:_place_menu()
 			else:_place_guide()
 	model.tick(minf(delta,0.05))
+	if model.records.size()>last_record_count:
+		var captured:Dictionary=model.records.back()
+		status=str(captured.get("kind","Measurement")).replace("_"," ").capitalize()+" captured. "+("Wait for zero speed, then inspect the analyzer." if model.rpm>0.1 else "Inspect the analyzer.")
+	last_record_count=model.records.size()
 	_sync_narration()
 	if tutorial.active and input_focused and not menu_open and (not xr_active or _head_tracking_valid()):
-		var progress=tutorial.tick(0.0 if narrator.is_blocking() else minf(delta,0.05),_tutorial_context())
+		var progress=tutorial.tick(minf(delta,0.05),_tutorial_context())
 		if progress.get("advanced",false) or progress.get("finished",false):_update_ui()
 	var t={"rpm":model.rpm,"time":model.time,"mounted":model.mounted,"guard_closed":model.guard_closed,"sensor_position_mm":model.sensor_position_mm,"masses":model.masses,"angles":model.angles,"mode":model.mode}
 	geometry.update_state(t)

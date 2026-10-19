@@ -14,11 +14,19 @@ const TASK_PIXEL_SIZE: float = 0.00055
 const TEXT: Color = Color("eff9fc")
 const ACCENT: Color = Color("6ce5c9")
 const SHORT_ACTIONS: Dictionary = {
-	"load": "Seat rotor upright", "home": "Press HOME", "guard": "Lower and release",
-	"baseline": "Press BASELINE", "open_trial": "Lift guard", "trial_fit": "Press FIT TRIAL",
-	"close_trial": "Lower and release", "trial_measure": "Measure Trial A", "solve": "Press SOLVE",
+	"load": "Seat rotor upright", "home": "Press HOME", "probe_adjust": "Turn probe micrometer",
+	"probe_restore": "Restore HOME reference", "open_setup": "Lift guard for setup", "mass_practice": "Try MASS dial", "angle_practice": "Try ANGLE dial",
+	"clear_mass": "Return MASS to zero", "mode_two": "Choose TWO-PLANE mode", "plane_b": "Select plane B",
+	"plane_a": "Select plane A", "speed_explore": "Try SPEED setting", "speed_restore": "Set 1200 RPM",
+	"guard": "Lower and release", "preview_start": "Start practice SWEEP", "stop": "Press STOP",
+	"estop": "Test E-STOP latch", "recover": "Release with RECOVER", "rehome": "Rehome after recovery",
+	"baseline": "Measure starting vibration", "chart_order": "Show ORDER spectrum", "open_trial": "Lift guard",
+	"trial_fit": "Fit known A trial", "close_trial": "Lower and release", "trial_measure": "Measure Trial A",
+	"open_trial_b": "Lift guard", "plane_b_trial": "Select trial plane B", "trial_fit_b": "Fit known B trial",
+	"close_trial_b": "Lower and release", "trial_measure_b": "Measure Trial B", "solve": "Solve both planes",
 	"open_apply": "Lift guard", "apply": "Apply correction", "close_verify": "Lower and release",
-	"verify": "Press VERIFY", "repeat": "Press REPEAT", "report": "Save report"
+	"verify": "Verify measured reduction", "repeat": "Measure repeatability", "sweep": "Explore resonance curve",
+	"report": "Save report"
 }
 
 var interactive_buttons: Array = []
@@ -36,7 +44,7 @@ func configure() -> void:
 	_box(Vector3(WIDTH_M, 0.002, 0.002), Vector3(0, 0.049, 0.001), ACCENT).name = "CalloutAccent"
 	labels.imperative = _label("Seat rotor upright", Vector3(-0.076, 0.022, 0.004), TASK_FONT_SIZE, TASK_PIXEL_SIZE, TEXT)
 	labels.title = labels.imperative
-	labels.progress = _label("1/15", Vector3(-0.107, -0.025, 0.004), 20, 0.0005, ACCENT)
+	labels.progress = _label("1/38", Vector3(-0.107, -0.025, 0.004), 20, 0.0005, ACCENT)
 	labels.state = _label("", Vector3(0.107, -0.025, 0.004), 20, 0.0005, ACCENT)
 	labels.state.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_arrow = Node3D.new()
@@ -57,8 +65,8 @@ func update_view(view: Dictionary) -> void:
 	if not _built: return
 	# Deliberately ignore body/theory/hint/title: these may be long scientific
 	# narration. Only the fixed, reviewed 2–5 word action is drawn on screen.
-	labels.imperative.text = str(SHORT_ACTIONS.get(str(view.get("id", "load")), "Follow highlighted target"))
-	var total: int = maxi(1, int(view.get("total", view.get("step_count", 15))))
+	labels.imperative.text = str(SHORT_ACTIONS.get(str(view.get("prompt_id", view.get("id", "load"))), "Follow highlighted target"))
+	var total: int = maxi(1, int(view.get("total", view.get("step_count", 38))))
 	var current: int = clampi(int(view.get("index", int(view.get("step_index", 1)) - 1)) + 1, 1, total)
 	labels.progress.text = "%d/%d" % [current, total]
 	var state: String = "Review" if bool(view.get("review", view.get("reviewing", false))) else "Done" if bool(view.get("ready", false)) else ""

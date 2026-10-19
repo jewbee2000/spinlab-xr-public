@@ -2,17 +2,19 @@
 
 An interactive reaction-wheel balancing and commissioning laboratory for **Meta Quest 2**, built by Walter Teitelbaum. Practice fixture setup, vibration measurement, trial-mass calibration, correction, and verification using synthetic training data.
 
-**Version 0.7.0 uses minimal prompts beside physical controls and bundled spoken work instructions.** The normal workspace has controller-driven gloves, nearby handles and dials, physical command caps, and a lower analyzer to the left of the guard. Four small circular A/B/X/Y markers identify the real Touch button positions above the gloves. B/Y opens the separate three-tab pointer menu and closes it again.
+**Version 0.8.0 (Android version code 10) teaches a complete two-plane balancing experiment in 38 interactive steps.** A clear introduction explains why an off-center mass makes a rotor shake. The learner then operates the actual probe micrometer, Mass and Angle dials, interlocked guard, and physical console, reads measured graphs, identifies both correction planes, and verifies the result.
 
-The fifteen-step balancing guide advances after confirmed work. A short action label appears beside the current target; long instructions and relevant measurement theory are spoken in a locally generated neural voice. Audio is bundled in the APK and works offline. The prompt is hidden if no nearby position clears the station and both eye sightlines. In Session, pause/resume, restart, skip, disable guide startup, toggle voice, or replay the current instruction. Right-stick click also replays narration. Use the [installation guide](docs/APK_SETUP.md), [workspace design](docs/UX_DESIGN.md), [tutorial](docs/TUTORIAL.md), [narration provenance and transcript](docs/NARRATION.md), [scientific methodology](docs/NATIVE_RESEARCH.md), and [validation record](docs/NATIVE_VALIDATION.md). Source is in `native/`; build with Godot 4.7.2/OpenXR. The browser version below provides a separate desktop and WebXR preview.
+Small prompts appear beside each target while bundled offline speech explains the action and its purpose. Correct work advances immediately, replacing the previous speech; listen before acting to hear the full explanation. Pause, restart, skip, disable startup, mute voice, or replay from Session. Right-stick click also replays. Setup changes or faults that invalidate calibration return the guide to fresh baseline/trial work without erasing historical records or operating equipment automatically.
 
-Menu controllers use headset-provided models when available, with pinned Touch v3 GLB assets as a fallback. Meta Capsense supplies controller-driven hand poses over those menu controllers when supported. See [controller visuals](docs/CONTROLLER_VISUALS.md).
+The default workspace shows controller-driven gloves and four small circular A/B/X/Y markers at the physical Touch button positions. Use nearby grips for the rotor, guard, actual micrometer drum, Mass, and Angle; wrist rotation turns the adjustments. There are no duplicate front-panel probe dial or ± controls. Release a held adjustment before pressing another setup control. Use the physical console for all ordinary operating commands, including HOME, SPEED, CHART, and SAVE REPORT.
 
-![Operator workspace in a wide desktop QA perspective](docs/images/operator-workspace.png)
+B/Y opens the separate **Tools / Session** pointer menu and replaces gloves with controller models and rays. Tools contains fault injection, assembly inspection, and motor sound; Session manages guidance, voice, movement, recentering, and reset. Operating commands are not duplicated in menu tabs. Menu controllers prefer headset-provided models, with pinned Touch v3 assets as fallback; controller-derived Capsense visuals appear when supported. See [controller visuals](docs/CONTROLLER_VISUALS.md).
 
-The scientific lab measures a baseline and independent trial masses, solves single- or two-plane complex influence coefficients, then verifies a newly installed correction. It synthesizes sampled tach-referenced vibration, fits DC/1×/2× by least squares, displays a 0–100 Hz DFT and resonance sweep, estimates three-window Type A repeatability, and exports scientific JSON records. Numerical analysis runs in isolated workers. No web server or network connection is required after installation.
+The lower side analyzer presents thick, distinct A/B traces with numerical axes. Captures select TIME; sweeps select the speed-response plot. CHART also exposes an ORDER spectrum normalized by the captured shaft speed, with 1× and 2× references. An explicit instruction appears before data exist. See [analyzer behavior](docs/ANALYZER.md), [installation](docs/APK_SETUP.md), [workspace design](docs/UX_DESIGN.md), [tutorial](docs/TUTORIAL.md), [voice transcript/provenance](docs/NARRATION.md), [scientific methodology](docs/NATIVE_RESEARCH.md), and [validation](docs/NATIVE_VALIDATION.md).
 
-Use the physical console for operating commands; push with the index tip, then withdraw. The menu retains Balance, Analyze, and Session tools, with no redundant Operate tab. Squeeze the nearby rotor, orange guard handle, or dial to hold it; release to let go. Dials respond to wrist rotation and nearby ± buttons. Keep holding the Touch controllers; optical hand tracking is not required. In the open menu, point and use the index trigger, then choose Close or press B/Y. The left stick adjusts bench height; the right stick walks at up to 0.65 m/s relative to head direction. Walking is suspended during menus, active holds, lost focus, or unavailable tracking and requires the stick to return to neutral before resuming. Recenter is in Session.
+The numerical lab measures a baseline and independent known trials, solves single- or two-plane complex influence coefficients, then tests the installed correction with a new capture. It synthesizes sampled tach-referenced vibration, fits DC/1×/2× by least squares, computes a 0–100 Hz DFT, explores quasi-steady resonance response, estimates three-window Type A repeatability, and exports JSON evidence. Analysis runs in isolated workers. The Quest app needs no web server or network after installation.
+
+The left stick adjusts bench height. The right stick walks at up to 0.65 m/s relative to head direction; it pauses during menus, active holds, focus/tracking loss, and requires neutral rearming. Keep holding both Touch controllers; optical hand tracking is unnecessary. Source is in `native/`, built with Godot 4.7.2/OpenXR.
 
 ```powershell
 # Once the local native toolchain is prepared:
@@ -22,13 +24,11 @@ Use the physical console for operating commands; push with the index tip, then w
 .\tools\Pull-Quest-Reports.ps1
 ```
 
-Fresh Windows build setup: `tools/Setup-NativeToolchain.ps1` downloads pinned Godot/plugin/Android versions plus JDK 17, configures Godot's Android paths, and prepares a local development signing key. Toolchain downloads are large. Keep `.local/spinlab-debug.keystore` for compatible future updates; it is excluded from Git. The APK is a signed development build. Physical headset evidence is recorded separately from software checks.
+`tools/Setup-NativeToolchain.ps1` prepares pinned Godot/plugin/Android versions and JDK 17. Keep `.local/spinlab-debug.keystore` for compatible updates; it is excluded from Git. The signed development build target is `artifacts/SpinLabXR-v0.8.0.apk`. [Releases](https://github.com/jewbee2000/spinlab-xr-public/releases) supply packaged builds; the validation record identifies exact exported/installed hashes and test evidence.
 
-The v0.7.0 build output is `artifacts/SpinLabXR-v0.7.0.apk`. Download packaged builds from [Releases](https://github.com/jewbee2000/spinlab-xr-public/releases) and retain the installed version/hash with feedback. Headset feedback confirms the automatic Load → HOME → Guard progression, the lower side analyzer, and pointer selection. The new tiny hand markers, contextual prompt placement, and narration require a fresh headset check. Movement comfort, report retrieval, and sustained performance remain pending. See the validation record for exact build/install evidence.
+The operator described v0.7.0's minimal prompts, speech, and small button markers as substantially better, then reported obscuring dial labels, missing beginner/micrometer instruction, and an empty graph. Version 0.8.0 addresses those findings. Its expanded lesson, readout clearance, chart readability, physical reach, and sustained performance require a fresh headset run; earlier observations do not establish these results.
 
-![Original simulated glove designs, open and gripping poses in desktop QA](docs/images/virtual-gloves.png)
-
-![Native two-plane balancing lab, version 0.3 desktop QA view](docs/images/native-desktop.png)
+![Operator workspace in a wide desktop QA perspective from an earlier revision](docs/images/operator-workspace.png)
 
 ## Browser version 0.1
 
@@ -46,7 +46,7 @@ node tools/serve.mjs
 
 Open **http://localhost:8080** on the computer for the desktop preview. For the physical Quest 2, follow [the installation guide](docs/INSTALL_QUEST2.md): enable developer USB debugging, connect a data cable, run `adb reverse tcp:8080 tcp:8080`, open **http://localhost:8080 in Quest Browser**, then select **Enter VR**. Rendering runs on the headset; the computer serves files. Keep the cable and server connected for reloads.
 
-These browser instructions apply to version 0.1. For the standalone version 0.7.0 APK, use the native guide above. Physical acceptance is recorded in the native validation document.
+These browser instructions apply to version 0.1. For the standalone version 0.8.0 APK, use the native guide above. Physical acceptance is recorded in the native validation document.
 
 ## Browser guided exercise
 
@@ -68,6 +68,7 @@ Phase is an ideally compensated imbalance position, not a raw accelerometer phas
 
 - [Floating guide, lesson coverage, and navigation](docs/TUTORIAL.md)
 - [Workspace, menu, guide, and movement design](docs/UX_DESIGN.md)
+- [Analyzer plots, data, and axes](docs/ANALYZER.md)
 - [Project architecture and development roadmap](docs/PROJECT_PLAN.md)
 - [Primary-source research and model assumptions](docs/RESEARCH.md)
 - [Quest 2 setup, testing, and troubleshooting](docs/INSTALL_QUEST2.md)
