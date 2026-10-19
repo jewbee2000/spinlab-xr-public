@@ -51,3 +51,4 @@ jobs:
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_workcell_geometry.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_operator_ui.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_controller_pose.gd
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_hand_control_guide.gd

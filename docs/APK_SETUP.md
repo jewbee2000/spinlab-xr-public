@@ -1,8 +1,8 @@
 # Install and test the native Quest 2 APK
 
-These instructions are for the **v0.5.1 standalone Android/OpenXR app** with a physical operating console, lower, angled side analyzer, four-tab menu, floating guide, and controller-driven gloves. The older browser instructions remain in [INSTALL_QUEST2.md](INSTALL_QUEST2.md). After installation, the native app runs on the headset without a local web server, Quest Link, or a tethered gaming PC.
+These instructions are for the **v0.5.2 standalone Android/OpenXR app** with a physical operating console, lower, angled side analyzer, four-tab menu, floating guide, and controller-driven gloves. The older browser instructions remain in [INSTALL_QUEST2.md](INSTALL_QUEST2.md). After installation, the native app runs on the headset without a local web server, Quest Link, or a tethered gaming PC.
 
-Instructions updated 18 October 2026. Meta may change menu names. Headset feedback confirms v0.5 menu switching, pointers, and trigger selection. Check v0.5.1 controller orientation, the enlarged floating guide, and lower side analyzer first; walking comfort, fingertip contact, report retrieval, and sustained performance require their own observations. Exact build/install evidence belongs in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md). See [UX_DESIGN.md](UX_DESIGN.md) for workspace and movement behavior.
+Instructions updated 18 October 2026. Meta may change menu names. Headset feedback confirms v0.5 menu switching, pointers, and trigger selection. Check v0.5.2 hand button guides, controller orientation, enlarged floating tutorial, and lower side analyzer first; walking comfort, fingertip contact, report retrieval, and sustained performance require their own observations. Exact build/install evidence belongs in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md). See [UX_DESIGN.md](UX_DESIGN.md) for workspace and movement behavior.
 
 ## 1. Enable developer mode and authorize this computer
 
@@ -49,10 +49,10 @@ The repository includes helpers: `tools/Install-APK.ps1` installs and launches `
 
 ## 3. Install the built APK
 
-The v0.5.1 build output is `artifacts/SpinLabXR-v0.5.1.apk` and its Android package is `us.teitelbaum.spinlabxr`. Build it with `tools/Build-APK.ps1`, or place the matching downloaded release APK at that path. In the same PowerShell window:
+The v0.5.2 build output is `artifacts/SpinLabXR-v0.5.2.apk` and its Android package is `us.teitelbaum.spinlabxr`. Build it with `tools/Build-APK.ps1`, or place the matching downloaded release APK at that path. In the same PowerShell window:
 
 ```powershell
-$spinlabApk = Join-Path (Get-Location) 'artifacts\SpinLabXR-v0.5.1.apk'
+$spinlabApk = Join-Path (Get-Location) 'artifacts\SpinLabXR-v0.5.2.apk'
 Test-Path -LiteralPath $spinlabApk
 & $spinlabAdb install -r $spinlabApk
 ```
@@ -65,11 +65,11 @@ Put on the headset, open **Library**, select **Unknown Sources**, and choose **S
 
 Start seated or standing with a clear boundary and both Touch controllers awake. **Keep holding the controllers.** The gloves use their tracked poses and inferred finger animation; you do not need to enable optical hand tracking in the headset settings.
 
-The normal workspace has **no open control menu**. Use controller pointers in the B/Y menu for command buttons; the physical console is an optional alternative. Look at the lower, angled analyzer to the left of the guard for measurements and status. If startup guidance is enabled, a separate read-only card appears beside the work area. Read DO THIS and WHY, perform the action yourself, then press **A** to continue. Practical pages wait for the required accepted state; the hint explains what remains.
+The normal workspace has **no open control menu**. A read-only guide next to each glove identifies the physical buttons: **left Y (upper) Menu / X (lower) Guide back**, **right B (upper) Menu / A (lower) Guide next**. It also shows the stick, grip, and trigger functions. These guides face the viewer, follow their hands, and disappear in pointer-menu mode. Use controller pointers in the B/Y menu for command buttons; the physical console is an optional alternative. Look at the lower, angled analyzer to the left of the guard for measurements and status. If startup guidance is enabled, a separate read-only card appears beside the work area. Read DO THIS and WHY, perform the action yourself, then press **A** to continue. Practical pages wait for the required accepted state; the hint explains what remains.
 
 Press **B/Y** to open the four-tab menu. Its controller models and rays replace the gloves while it is open. Point and use the index trigger; press B/Y or Close Menu to return to physical operation. Session provides **Pause/Resume Floating Guide**, **Restart Floating Guide**, **Skip Current Guide Lesson**, and **Guide at Startup: On/Off**. Pause/resume preserves the current page. Turning startup off changes later launches; completing the guide also turns it off. Instruction navigation does not reset the lab. [TUTORIAL.md](TUTORIAL.md) describes all 23 lessons.
 
-| Action | Version 0.5.1 headset control |
+| Action | Version 0.5.2 headset control |
 | --- | --- |
 | Push a physical console button (optional) | Reach the visible index tip toward its front face and push through its short travel. Keep the index trigger released to extend the virtual finger. Withdraw before another press. A successful actuation gives one haptic click. |
 | Hold a nearby object/handle | Move the palm close until the `GRIP` hint appears, then squeeze and hold the controller's side grip. Release to let go. |
@@ -103,8 +103,8 @@ Check the new interactions as well as the lab sequence:
 4. Try running before setup, plus deliberate sensor/tach faults and E-stop recovery. Reset/release must not restart the rotor automatically.
 5. Change menu, move/recenter the station, and briefly interrupt tracking with the headset's system interface. Existing contact must not become a new press; reacquire the target deliberately.
 6. Try the floating guide's first-time sequence, A/X navigation, unmet-objective hints, Session pause/resume, skip, and restart during existing work. Check startup OFF across relaunch and confirm the guide does not block a mechanism or act as an extra touch panel. Record any truncated text or unclear action.
-7. Save a report and use section 5 to retrieve it. Earlier retrieval did not establish successful export; check this explicitly in v0.5.1 before relying on saved records.
-8. Run for at least five minutes through representative pressing, carrying, dials, guide/menu navigation, walking, and analysis. Observe comfort, frame pacing, and controller responsiveness. The Quest 2 starting target is 72 Hz (about 13.9 ms per frame interval). Earlier short runtime samples and a desktop FPS counter do not establish v0.5.1 sustained performance.
+7. Save a report and use section 5 to retrieve it. Earlier retrieval did not establish successful export; check this explicitly in v0.5.2 before relying on saved records.
+8. Run for at least five minutes through representative pressing, carrying, dials, guide/menu navigation, walking, and analysis. Observe comfort, frame pacing, and controller responsiveness. The Quest 2 starting target is 72 Hz (about 13.9 ms per frame interval). Earlier short runtime samples and a desktop FPS counter do not establish v0.5.2 sustained performance.
 
 Report what the headset actually does. An APK build, manifest inspection, or numerical unit test does not prove that the physical-controller and rendering checks passed.
 

@@ -1,6 +1,6 @@
 # Operator interaction redesign
 
-Version 0.5.1 separates the physical station, its analyzer, optional instruction, and the application menu. This document records the input contract and locomotion mathematics. Hardware acceptance of this revision is pending; previous launches, desktop captures, or numerical tests do not establish headset comfort or reliable physical interaction.
+Version 0.5.2 separates the physical station, its analyzer, optional instruction, and the application menu. This document records the input contract and locomotion mathematics. Hardware acceptance of this revision is pending; previous launches, desktop captures, or numerical tests do not establish headset comfort or reliable physical interaction.
 
 ## Workstation and menu
 
@@ -17,6 +17,14 @@ The optional floating guide sits beside the work area and explains DO THIS and W
 **B or Y opens/closes an explicit menu.** Opening it replaces the simulated gloves with Touch-controller representations and aim pointers. Point and use the trigger to choose menu controls. Menu input has its own collision layer; it must not reach through the menu to actuate physical buttons. Pointer selection and grip acquisition require release/rearming after interruption; fingertip contact requires a fresh front approach after the menu closes. Merely opening the menu does not reset the model or start/stop a measurement.
 
 Operate, Balance, Analyze, and Session remain menu categories. The guide is managed in Session rather than occupying a fifth tab. Session includes guide pause/resume, restart, skip lesson, startup preference, walking on/off, report save, recenter, and Exit; New Session is in Operate. Pausing/resuming keeps the current guide page and temporary practice history, while Restart begins it again. B/Y always provides the visible menu transition; holding it does not secretly enable another interaction mode.
+
+## Hand button guides
+
+In glove mode, each tracked hand has a small viewer-facing legend beside its outer wrist. The left legend identifies Y (upper) as Menu and X (lower) as Guide back; the right identifies B (upper) as Menu and A (lower) as Guide next. Secondary rows show left-stick bench height, right-stick walking, grip to hold nearby hardware, and trigger to curl the index (release to point). Button names refer to the physical Touch controls, not virtual press targets. Guide actions indicate off, first-page, or waiting states; walking indicates disabled or held-object suspension. Holding changes the grip reminder to release. The legends describe availability without operating the lab.
+
+Legends follow hand position while facing the current viewer; wrist rotation cannot invert their letters. They are read-only, use ordinary depth testing, and have no collision/ray targets. Opening the menu hides them along with the gloves. Grip tracking, input focus, and a valid head pose are required; menu aim tracking is unnecessary for these hand references. Label placement, measured text widths, and input-mode/tracking transitions have software coverage. Physical readability and unobstructed reaching require headset feedback.
+
+![Hand button guides beside controller-tracked gloves in desktop QA](images/hand-controls.png)
 
 ## Chosen controller map
 

@@ -1,6 +1,6 @@
 # Floating guide: operation and engineering methods
 
-Version 0.5.1 presents a **read-only floating guide**, separate from the four-tab menu and the physical station console. Its 23 short lessons pair one task with relevant theory. All instrument data remain synthetic; guide completion is navigation history, not operator qualification.
+Version 0.5.2 presents a **read-only floating guide**, separate from the four-tab menu and the physical station console. Its 23 short lessons pair one task with relevant theory. All instrument data remain synthetic; guide completion is navigation history, not operator qualification.
 
 Quest 2 feedback on version 0.5 found the guide too small and difficult to read. The readability revision increases the text itself, gives instruction and theory equal bright contrast, and removes the small decorative footer. Physical acceptance of the enlarged guide remains pending; earlier launch/button/spin checks do not establish its placement, readability, or comfort.
 
@@ -18,6 +18,8 @@ On a fresh installation, the guide appears with the menu hidden. It contains no 
 | Grip near a mechanism | Carry the rotor, move the orange guard handle, or hold a dial while twisting the wrist. |
 | Right stick | Walk relative to the headset viewing direction when walking is enabled. |
 | Left stick | Adjust workbench height. |
+
+In glove mode, look beside each hand for the physical button map: **left Y Menu / X Guide back**, **right B Menu / A Guide next**. The legends follow the hands and remain facing the viewer; they disappear when the controller-pointer menu is open. Off/wait/first-page cues explain when guide navigation is unavailable.
 
 The menu has **Operate, Balance, Analyze, and Session** tabs; its current tab is highlighted. Guide content is not a fifth tab. The guide hides while the menu is open and returns when it closes. Opening the menu alone does not stop an existing acquisition; keep the guard closed until zero speed.
 
