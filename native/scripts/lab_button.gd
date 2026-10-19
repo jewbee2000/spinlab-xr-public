@@ -13,10 +13,15 @@ var stroke_m := 0.008
 var depression_m := 0.0
 var _hovered := false
 var _bezel: MeshInstance3D
+var interaction_layer := 1
+var guide_highlight := false:
+	set(value):
+		guide_highlight=value
+		_update_face_color()
 var enabled := true:
 	set(value):
 		enabled=value
-		collision_layer=1 if enabled else 0
+		collision_layer=interaction_layer if enabled else 0
 		if not enabled:
 			_hovered=false
 			depression_m=0.0
@@ -62,7 +67,7 @@ func configure(caption: String, command: String, width: float = 0.66, height: fl
 	text_label.modulate=Color("e8f3f6")
 	text_label.outline_size=0
 	add_child(text_label)
-	collision_layer=1 if enabled else 0
+	collision_layer=interaction_layer if enabled else 0
 	collision_mask=0
 	_update_face_color()
 
@@ -104,5 +109,5 @@ func _update_face_color() -> void:
 		if text_label:text_label.modulate=Color("647d89")
 		return
 	if text_label:text_label.modulate=Color("e8f3f6")
-	var color=hover_color if _hovered else normal_color
+	var color=hover_color if _hovered or guide_highlight else normal_color
 	face.material_override.albedo_color=color.lerp(Color("6ce5c9"),0.28*depression_m/stroke_m)

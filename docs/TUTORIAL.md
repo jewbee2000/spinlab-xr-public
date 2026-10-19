@@ -1,88 +1,93 @@
-# Learn: guided operation and engineering methods
+# Floating guide: operation and engineering methods
 
-Version 0.4 adds a **LEARN** tab with a self-paced, 23-page tutorial. Each page separates **WHAT** to do from **WHY** the action matters. It uses the real laboratory controls and measured simulation results. All instrument data remain synthetic; completing the tour is not a qualification or a demonstration of real-machine safety.
+Version 0.5 presents a **read-only floating guide**, separate from the four-tab menu and the physical station console. Its 23 short lessons pair one task with relevant theory. All instrument data remain synthetic; guide completion is navigation history, not operator qualification.
 
-Physical Quest 2 acceptance of the tutorial is pending. The earlier v0.2 launch/button/spin smoke test does not establish this revision's text readability, hand alignment, navigation, reach, or learning effectiveness.
+Physical Quest 2 acceptance of this interface remains pending. Earlier launch/button/spin smoke tests do not establish this revision's guide placement, controller transitions, walking comfort, text readability, or learning effectiveness.
 
-## Using Learn
+## Controls and input modes
 
-1. Open **LEARN**, the fifth tab on the control panel. On a fresh installation, the startup preference opens the tutorial there. It does not start a measurement or operate a mechanism.
-2. Read the current WHAT and WHY sections. **Practice** opens the relevant Operate, Balance, Analyze, or Session menu. The compact coach display keeps the current instruction visible while the real controls are in use.
-3. Complete the action yourself. For a practical objective, **Next** remains disabled until the tutorial observes its required state or accepted outcome. Read-only reference pages can continue immediately. Progress never advances automatically.
-4. Use **OPEN LESSON** to return from a practice menu while its objective is unmet, or **LESSON / NEXT** to continue once ready. **Back**, **Skip lesson**, and **Skip for now** let you review or leave without operating the lab. Back is unavailable on the first page because there is no previous page.
-5. Use **Restart** in Learn for a refresher. Restart returns to the first tutorial page; it preserves the current fixture, measurements, and reports.
+On a fresh installation, the guide appears with the menu hidden. It contains no touch buttons or ray targets. **Use menu pointers and index triggers for command buttons. No lesson requires pressing a button with a virtual hand.** Hands are used for carrying the rotor, lifting the guard, and turning dials.
 
-**STARTUP: ON / OFF** is a persistent preference. Turning it off keeps future launches in the ordinary lab, and Learn remains available manually. **Skip for now** closes the current tour without changing that preference. Completing the final page records completion and turns startup off. Turning startup on again explicitly reopens the tutorial on a later launch, even after completion. The current page and temporary practice flags are not a saved lab session; reopening the app starts a fresh laboratory as before.
+| Control | Behavior |
+| --- | --- |
+| **A**, right controller | Continue the current guide lesson when its objective is met; finish on the last page. |
+| **X**, left controller | Return to the previous guide lesson. |
+| **B/Y** | Open or close the menu. Opening shows controller pointers; closing restores virtual hands. |
+| Index trigger while menu is open | Select a highlighted menu control using its controller ray. |
+| Index fingertip while menu is closed, optional | Physical fixture/console caps are an alternative to menu commands. Approach from the front and withdraw; other fingers can remain curled. |
+| Grip near a mechanism | Carry the rotor, move the orange guard handle, or hold a dial while twisting the wrist. |
+| Right stick | Walk relative to the headset viewing direction when walking is enabled. |
+| Left stick | Adjust workbench height. |
 
-With Touch controllers, extend the virtual index finger and approach buttons from their front. Withdraw before another press. Grip the nearby rotor, orange guard handle, or dial when its hint appears. Short B/Y cycles all five tabs; holding B/Y toggles menu reach assist. Assist can select menu controls with an aim ray and trigger; mechanical handles still need nearby grips. Optical hand tracking is not required. On desktop, use the world controls and the dedicated touch-practice button.
+The menu has **Operate, Balance, Analyze, and Session** tabs; its current tab is highlighted. Guide content is not a fifth tab. The guide hides while the menu is open and returns when it closes. Opening the menu alone does not stop an existing acquisition; keep the guard closed until zero speed.
 
-While a lesson is active, its compact task coach remains visible. The ordinary Guided Coach setting applies to the general lab guidance; use Skip for now to leave lesson guidance.
+Movement and height adjustments require focused, tracked input, neutral-stick rearming, a closed menu, and released mechanical grips. Walking can be disabled from Session. Keep physical movement within the clear play area; a virtual movement limit does not replace headset boundary awareness. After tracking, focus, or input-mode changes, release grips/triggers and center the sticks before acting again.
 
-The tutorial is optional while work is in progress. Opening it, changing pages, choosing Practice, skipping, or changing its startup preference does not reset the model, select a balancing mode, inject a fault, fit a mass, or start a run. Some **actions the learner deliberately performs** do discard calibration: Home, a probe/speed/mode change, a new baseline, E-stop, or an injected fault. New Session clears lab data. Save the work you need before practicing those actions.
+On desktop, **Space** continues, **Backspace** goes back, and **M** opens/closes the same menu. Mouse clicks operate visible world controls. Desktop checks do not reproduce headset tracking or comfort.
+
+## Following or pausing the guide
+
+Read **DO THIS**, perform the action yourself, then press A. Relevant theory appears under **WHY**. The action hint explains an unmet objective. The guide never advances automatically or operates the station. An accepted measurement must finish analysis and coast below 0.1 rpm before a measurement lesson can continue.
+
+Use **B/Y > Session** for:
+
+- **Pause/Resume Floating Guide**: retain the current page and temporary practice evidence during the current app session.
+- **Restart Floating Guide**: return to the first lesson without resetting the fixture, calibration, measurements, or reports.
+- **Skip Current Guide Lesson**: move past an optional or inconvenient exercise without performing it.
+- **Guide at Startup: ON/OFF**: persist whether the guide appears on a later launch.
+
+Completing the last page records completion and turns startup off. Explicitly turning startup on again enables the next-launch guide even after completion. Pausing or skipping does not alter that preference. Current page and temporary practice evidence are not persisted across app launches.
+
+The third lesson practices **B/Y → point at the Operate tab → index trigger → B/Y close**. It requires a real accepted menu selection and a closed menu before A continues. A raw pointer event before validation does not count. A valid optional physical-cap contact can also supply input-practice evidence; it does not imply that the requested laboratory operation succeeded. Preparation and scientific lessons still require the corresponding accepted state or measurement.
+
+Some deliberate exercises discard current calibration: Home, probe/speed/mode changes, a new baseline, E-stop, and injected faults. Use Skip Current Guide Lesson to retain valuable calibration during optional mode-change or recovery practice. **Operate > New Session** clears laboratory data; save work first. Neither navigation nor Pause/Resume performs that reset.
 
 ## Lesson coverage
 
-| Page | WHAT the learner does | WHY / engineering concept |
+| Page | Task | Engineering purpose |
 | --- | --- | --- |
-| 1. Welcome | Locate the tutorial, Practice, and navigation controls. | Separate instructions from machine operation and synthetic evidence from physical validation. |
-| 2. Comfortable bench | Try height, distance, recenter, or menu reach assist in Session. | Reach and recovery after focus/tracking interruption; no required artificial locomotion. |
-| 3. Fingertip press | Use the safe touch-practice control, then withdraw. | Front approach, stroke, debounce, and rearming prevent repeated or accidental presses. |
-| 4. Load rotor | Grip the tray rotor, carry it upright, and release above the spindle. | Exclusive ownership and constrained assembly; the model does not simulate contact forces. |
-| 5. Home probe | Home at zero speed with a loaded rotor and clear faults. | Establish the 6.00 mm reference before influence-coefficient calibration. |
-| 6. Wrist dials | Move the probe dial, release it, and restore Home. | Rotation about the dial shaft, active correction plane, and setup-dependent calibration. |
-| 7. Guard | Lower the orange handle fully, release, and confirm the latch. | The closed interlock and released handles are distinct run prerequisites. |
-| 8. Baseline | Capture the unchanged rotor response and wait through analysis/coast. | Preserve a reference configuration; an interrupted run is not an accepted measurement. |
-| 9. Amplitude and phase | Read both channels, units, and phase observability. | Peak versus RMS, tach reference, mass-radius unbalance, speed-squared forcing, and support phase. |
-| 10. Analyzer | Open Time and Order chart views. | Tach-referenced least squares separates DC/1×/2×; the displayed DFT has leakage and is not the solver's phasor. |
-| 11. Known trial | Open the guard and fit a plane A trial relative to baseline. | A known complex mass-radius change measures sensitivity; the other plane returns to baseline. |
-| 12. Trial capture | Close the guard and acquire the plane A response. | Use matching speed/setup and an independent trial to isolate its effect. |
-| 13. Solve | Solve and inspect correction and matrix condition. | Single-plane `alpha = (Vt - V0)/Ut`, `C = -V0/alpha`; use measured complex data. |
-| 14. Apply and verify | Fit total calculated masses and acquire fresh verification. | Replace trial masses, then test the prediction with a new measurement. Inspect and retry if reduction is poor. |
-| 15. Repeatability | Acquire the three-window repeatability result. | Sample scatter `s` differs from `s/sqrt(n)`; Type A SEM is not total or expanded uncertainty. |
-| 16. Resonance sweep | Acquire and inspect the speed-response trace. | Separate speed-dependent forcing from support amplification; quasi-steady windows are not transient integration or a damping fit. |
-| 17. Two-plane reference | Optionally select two-plane mode and review its full sequence. | Two sensors respond to both planes; independent A/B trials populate direct and cross coefficients. Poor conditioning amplifies error. |
-| 18. E-stop recovery | At zero speed, latch E-stop, release deliberately, and rehome. | Calibration becomes invalid and release never restarts the drive. |
-| 19. Sensor/tach recovery | Practice each fault, reset, and rehome. | Missing measurement/reference signals invalidate calibration; future balancing requires fresh captures. |
-| 20. Tools and test speed | Optionally explore the exploded view, sonification, ordinary coach, and 900/1,200/1,500 rpm speed control. | Geometry/audio aid inspection; changing test speed invalidates calibration, and baseline/trials must use the same speed. |
-| 21. Report | Save and confirm a JSON output path. | Connect configuration, accepted captures, solver results, events, references, and limitations. |
-| 22. Session controls | Review New Session and Exit without needing to activate them. | Explicit data lifecycle; lesson navigation is separate from laboratory reset. |
-| 23. Finish | Finish manually, or keep practicing and return later. | Tour completion includes any skipped pages and does not certify competence or headset performance. |
+| 1. Welcome | Locate A/X navigation and B/Y menu switching. | Separate read-only instruction, menu input, and fixture operation. |
+| 2. Comfortable position | Try right-stick movement or left-stick height adjustment. | Reach, clear space, neutral input, and recovery after focus/tracking interruption. |
+| 3. Pointer command | Select Operate with a controller ray/trigger, then close the menu. | Preferred command input, validated selection, and separation from scientific acceptance. |
+| 4. Load rotor | Grip the tray rotor and release upright over the spindle. | Exclusive ownership and constrained assembly; contact forces are not simulated. |
+| 5. Home probe | Select Operate > Home at zero speed with a loaded rotor and clear faults. | Establish the 6.00 mm reference before calibration. |
+| 6. Wrist dials | Adjust the probe, release, and restore Home. | Rotation about the dial axis, active correction plane, and setup-dependent calibration. |
+| 7. Guard | Lower the orange handle fully and release to latch. | Closed interlock and released handles are distinct start prerequisites. |
+| 8. Baseline | Capture the unchanged rotor and wait through coast. | Store a reference; Stop / Controlled Coast aborts partial acquisition. |
+| 9. Amplitude/phase | Read both channels, units, and phase observability. | Peak versus RMS, tach reference, mass-radius unbalance, and speed-squared forcing. |
+| 10. Analyzer | Use Analyze > Chart for Time and Order views. | Tach least squares differs from the displayed DFT and its leakage. |
+| 11. Known trial | Fit a known plane A trial with an open guard. | Measure sensitivity with one known complex mass-radius change. |
+| 12. Trial capture | Capture Trial A at matching speed and setup. | Isolate the trial's response from baseline. |
+| 13. Solve | Inspect correction mass, angle, and matrix condition. | `alpha = (Vt - V0)/Ut`, `C = -V0/alpha`; solve from measured complex data. |
+| 14. Apply/verify | Install total correction masses and capture fresh verification. | Test the prediction; inspect and retry a low reduction. |
+| 15. Repeatability | Acquire the three-window result. | Sample scatter `s` differs from Type A SEM, `s/sqrt(n)`. |
+| 16. Sweep | Inspect the speed-response trace. | Separate changing forcing from support amplification; quasi-steady windows are not transient integration. |
+| 17. Two-plane reference | Select the advanced mode or skip to retain calibration. | Independent A/B trials identify direct/cross coefficients; conditioning controls sensitivity to error. |
+| 18. E-stop recovery | At zero speed, latch, release, and rehome. | Calibration becomes invalid; release never starts the drive. |
+| 19. Sensor/tach recovery | Reset and rehome after each fault. | Missing measurement/reference signals require fresh calibration. |
+| 20. Reference tools | Explore exploded view, sound, coach, and test speed. | Geometry/audio aid inspection; 900/1,200/1,500 rpm changes invalidate calibration. |
+| 21. Report | Save and confirm a JSON output path. | Connect setup, captures, solver results, events, references, and limits. |
+| 22. Session | Review guide preferences, New Session, and Exit. | Keep guide navigation distinct from laboratory data lifecycle. |
+| 23. Finish | Press A to finish or continue practicing. | Completion includes any skipped pages and makes no competence or performance claim. |
 
-The two-plane page is an optional advanced reference, not a second enforced complete balancing exercise. Selecting its mode is its practice gate. The learner can then repeat the documented baseline → independent A/B trials → solve → apply → verify workflow. It is safe to skip that page to retain current single-plane calibration. The fault and E-stop practices are also skippable.
+The two-plane page is an advanced reference rather than a second enforced complete calibration. Its state gate recognizes selection of Two Plane at zero speed. Full two-plane practice still requires fresh baseline → independent A/B trials → solve → apply totals → verify both sensors. Skip it to preserve a single-plane calibration.
 
-## Reading results correctly
+## Interpreting the science
 
-Native capture uses 1,024 samples at 1,024 Hz; the waveform displays the last 256 samples and the spectrum covers 0–100 Hz. Vibration is **displacement in micrometres peak**. For a sinusoid, RMS is peak divided by the square root of two. Measured tach phase includes the support and sensor response; it is not directly the physical heavy-spot angle. Near the simulated noise floor, phase is unavailable.
+Each capture contains 1,024 samples at 1,024 Hz. The displayed waveform retains the last 256 samples; the spectrum covers 0–100 Hz. Vibration is **displacement in micrometres peak**. A sinusoid's RMS is peak divided by the square root of two. Tach phase includes support and sensor response, so it is not directly the heavy-spot angle. Near the synthetic noise floor, phase is unavailable.
 
-The solver identifies complex influence coefficients from captured baseline and trial data. The trial helper restores both planes to their baseline mass configuration before adding the selected trial. Applying a solution installs the **total** masses, including any baseline masses, and removes the temporary trial configuration. One-plane balancing minimizes sensor A at one speed; it does not guarantee zero motion on B. Two-plane balancing requires independent trials and verification of both channels. The model rejects singular/poorly conditioned matrices and inadequate trial sensitivity.
+The solver identifies complex influence coefficients from actual captured simulation data. Fit Known Trial restores the other plane to baseline. Fit Calculated Correction replaces trial configurations with the **total installed masses**, including any baseline masses. Single-plane balancing minimizes sensor A at one speed; sensor B can retain motion. Independent two-plane trials populate both direct and cross responses.
 
-The verification lesson requires a fresh accepted verification of the installed correction, not merely pressing Verify or seeing an earlier green result. A low reduction still provides a measurement to inspect; tutorial progress is not awarded based on an invented pass. The ordinary lab's verification status remains authoritative. Probe/speed/mode or correction changes invalidate the corresponding current calibration/verification.
+Verification requires a fresh accepted capture of the installed correction, unchanged configuration, healthy referencing, and zero speed. A low measured reduction still supplies a result to inspect; it does not become an invented pass. Probe, speed, mode, or correction changes invalidate the relevant current calibration/verification. New-session record IDs cannot be compared against an Apply checkpoint from a discarded session.
 
-The sweep is a sequence of quasi-steady synthetic windows around an illustrative 22 Hz support mode. Its force varies with speed squared, so the unnormalized response peak cannot supply a simple half-power damping estimate. Repeatability uses three independent synthetic-noise windows; it omits a full calibration, covariance, and expanded-uncertainty budget. Detailed equations, assumptions, and primary references are in [NATIVE_RESEARCH.md](NATIVE_RESEARCH.md).
+The sweep evaluates quasi-steady synthetic windows around an illustrative 22 Hz support mode. Unbalance forcing changes with speed squared, so its unnormalized peak width is not a direct damping estimate. Repeatability reports three independent-noise windows, sample scatter, and Type A SEM; it omits a full calibration, covariance, and expanded-uncertainty budget. Equations and primary references are in [NATIVE_RESEARCH.md](NATIVE_RESEARCH.md).
 
-## Implementation and review contract
+## Implementation and validation
 
-`native/scripts/lab_tutorial.gd` is a separate `RefCounted` controller. It reads a lab snapshot and accepted action outcomes; it has no laboratory-model reference and never operates the station. Main supplies current configuration, readiness, capture/solver records, chart state, handle ownership, and save outcomes. Existing compatible data can satisfy state-based objectives; entering Learn does not force a reset or new copy of every experiment. Temporary flags track interactions such as comfort controls, touch practice, chart visits, recovery practice, and successful save.
+`lab_tutorial.gd` is a separate `RefCounted` state controller. It reads snapshots and accepted action outcomes without holding or operating the laboratory model. Its public API retains `start`, `observe`, `view`, `next`, `back`, `skip_step`, `skip`, `set_startup`, and `should_autostart`. Practical gates inspect actual state, accepted captures, and confirmed saves. Input practice accepts validated menu selection or optional physical contact separately from operation acceptance, and requires menu closure.
 
-The public interface is:
+`tutorial_panel.gd` renders the floating 0.72 × 0.48 m guide. Its instruction and theory are each at most 200 characters and three displayed lines. It has no colliders, touch controls, ray targets, or input dispatch. Root application code owns guide placement and controller/keyboard navigation. Showing or hiding the panel cannot operate the laboratory.
 
-```gdscript
-LabTutorial.new(settings_path = "user://tutorial.cfg")
-start(snapshot)
-observe(snapshot, event = {})
-view(snapshot)
-next(snapshot)      # { ok, message, finished }
-back()
-skip_step()
-skip()
-set_startup(enabled)
-should_autostart()
-```
+`ConfigFile` stores only startup preference and completion history in `user://tutorial.cfg`. An empty path is memory-only for tests. Missing preferences use defaults; malformed/unwritable settings report an error without preventing laboratory use. Settings are written on explicit preference changes or completion, not merely on launch.
 
-`view()` supplies the page `id`, `chapter`, `title`, `body`/`what`, `theory`/`why`, `practice_tab`, `target`, `index`, `total`, progress, `ready`, and a short unmet-objective `hint`. The UI shows WHAT and WHY from this view, disables only gated Next, and sends navigation back through the tutorial controller. `next()` checks readiness again; a disabled visual button is not the only protection. Practical steps inspect accepted outcomes and current state, including completion of capture/analysis and zero-speed conditions where required. Rejected commands do not satisfy practice events.
-
-`ConfigFile` stores only the startup preference and completion history in `user://tutorial.cfg`. An empty settings path provides a memory-only instance for deterministic tests. Missing settings use defaults; malformed/unwritable settings return an error that can be shown without blocking the laboratory. Explicit `load_settings()` and `save_settings()` methods support this boundary. Tutorial completion is navigation history, not a log claiming that every skipped exercise was performed.
-
-Changing tutorial pages or returning from a practice menu rebuilds controls through the ordinary contact-reset path. A control appearing under an already embedded fingertip must not actuate. Tracking/focus recovery requires released grips and a fresh approach; it must not synthesize a successful action or advance the page. App/XR focus loss stops an active acquisition through the existing lab recovery path. Individual controller tracking loss releases its interaction; it does not by itself claim a completed measurement or a completed exercise.
-
-The pending acceptance matrix is in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md). Installation and direct-hand controls remain documented in [APK_SETUP.md](APK_SETUP.md) and [DIRECT_INTERACTION_DESIGN.md](DIRECT_INTERACTION_DESIGN.md).
+Automated checks cover all lesson text/layout, state gates, contact routing, the measured workflow, pause/resume, menu isolation, controller/keyboard navigation, reports, rejected reset preservation, and preference reload. They do not establish physical controller alignment, comfort, readability, or sustained headset frame pacing. Follow the pending acceptance matrix in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md), installation in [APK_SETUP.md](APK_SETUP.md), and interaction design in [DIRECT_INTERACTION_DESIGN.md](DIRECT_INTERACTION_DESIGN.md).

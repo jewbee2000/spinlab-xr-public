@@ -8,7 +8,9 @@ const HandVisual = preload("res://scripts/virtual_hand.gd")
 const DirectContact = preload("res://scripts/direct_interaction.gd")
 const Tutorial = preload("res://scripts/lab_tutorial.gd")
 const LessonPanel = preload("res://scripts/tutorial_panel.gd")
-const APP_VERSION = "0.4.0"
+const ControllerVisual = preload("res://scripts/virtual_controller.gd")
+const Navigation = preload("res://scripts/operator_navigation.gd")
+const APP_VERSION = "0.5.0"
 const TEAL = Color("6ce5c9")
 const INK = Color("e6f1f5")
 const DIM = Color("9db7c6")
@@ -38,6 +40,7 @@ var desktop_yaw := 0.25
 var desktop_pitch := -0.22
 var desktop_distance := 3.15
 var saved_path := ""
+var report_directory := "user://reports"
 var capture_path := ""
 var capture_frames := 0
 var sound_on := false
@@ -68,6 +71,21 @@ var tutorial
 var tutorial_panel
 var control_backplate: MeshInstance3D
 var lesson_navigation: Array = []
+var menu_open := false
+var menu_tab_buttons: Dictionary = {}
+var monitor: Node3D
+var walk_enabled := true
+var walk_distance_m := 0.0
+var height_changed := false
+var motion_armed := false
+var height_armed := false
+var guide_marker: MeshInstance3D
+var guide_step_id := ""
+var guide_paused := false
+## Optional override for deterministic controller/navigation tests.
+var head_tracking_override = null
+var recenter_pending_frames := 0
+var guide_anchor_pending := true
 
 func _ready() -> void:
 	name="SpinLabXR"
@@ -78,16 +96,19 @@ func _ready() -> void:
 	station.position.z=station_distance
 	geometry=Geometry.new()
 	station.add_child(geometry)
-	buttons.append(geometry.probe_home_button)
+	buttons.append_array(geometry.physical_buttons)
+	# Room geometry stays fixed when the operator adjusts workbench height.
+	geometry.get_node("Workshop").reparent(self,true)
 	kit_home=geometry.kit_rotor.transform
 	_setup_xr()
 	_build_controls()
 	_build_instrument()
 	_build_dials()
+	_build_guide()
 	_build_desktop_hud()
 	_setup_sound()
 	if tutorial_autostart and tutorial.should_autostart():
-		tutorial.start(_tutorial_context());tab="learn";_rebuild_menu()
+		tutorial.start(_tutorial_context());_place_guide()
 	if not tutorial.settings_error.is_empty():status=tutorial.settings_error+"; using default tutorial preferences."
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture="): capture_path=arg.trim_prefix("--capture=")
@@ -132,7 +153,7 @@ func _setup_xr() -> void:
 		xr_interface.connect("session_focussed",_set_xr_focus.bind(true))
 		for event in ["session_visible","session_synchronized","session_stopping","session_loss_pending"]:
 			xr_interface.connect(event,_set_xr_focus.bind(false))
-		xr_interface.connect("pose_recentered",_cancel_hand_interactions)
+		xr_interface.connect("pose_recentered",_on_pose_recentered)
 		xr_has_focus=xr_interface.get_session_state()==OpenXRInterface.SESSION_STATE_FOCUSED
 		input_focused=app_has_focus and xr_has_focus
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -147,7 +168,7 @@ func _setup_xr() -> void:
 			grip_node.tracker=hand;grip_node.pose="grip";rig.add_child(grip_node)
 			var ray=RayCast3D.new()
 			ray.target_position=Vector3(0,0,-4)
-			ray.collision_mask=1
+			ray.collision_mask=2
 			controller.add_child(ray)
 			var beam=MeshInstance3D.new()
 			var beam_mesh=CylinderMesh.new()
@@ -197,68 +218,120 @@ func _label(parent: Node3D, text: String, pos: Vector3, font_size := 30, pixel_s
 func _button(parent: Node3D, caption: String, command: String, pos: Vector3, width := 0.66, height := 0.062, color := Color("244353")):
 	var button=Button3D.new()
 	parent.add_child(button)
+	button.interaction_layer=2 if parent==controls or controls.is_ancestor_of(parent) else 1
+	button.set_meta("ui",button.interaction_layer==2)
+	button.set_meta("physical",button.interaction_layer==1)
 	button.position=pos
 	button.configure(caption,command,width,height,color)
 	buttons.append(button)
 	return button
 
 func _build_controls() -> void:
-	station.add_child(controls)
-	controls.position=Vector3(-0.46,1.50,-1.08)
-	control_backplate=_box(controls,Vector3(0.82,0.76,0.025),Vector3(0,-0.04,0),Color("132634"))
-	_label(controls,"SPINLAB XR  /  DIRECT HANDS",Vector3(-0.37,0.314,0.021),27,0.00059,TEAL)
-	for i in range(5):
-		var keys=["operate","balance","diagnostic","session","learn"]
-		var titles=["OPERATE","BALANCE","ANALYZE","SESSION","LEARN"]
-		_button(controls,titles[i],"tab:"+keys[i],Vector3(-0.32+i*0.16,0.235,0.027),0.15,0.052)
-	tutorial_panel=LessonPanel.new();controls.add_child(tutorial_panel);tutorial_panel.configure()
-	buttons.append_array(tutorial_panel.interactive_buttons)
-	lesson_navigation=[_button(controls,"LESSON / NEXT","tutorial:open_next",Vector3(-0.195,-0.34,0.029),0.37,0.055),_button(controls,"SKIP TUTORIAL","tutorial:skip",Vector3(0.195,-0.34,0.029),0.37,0.055)]
+	add_child(controls)
+	control_backplate=_box(controls,Vector3(0.88,0.80,0.028),Vector3(0,-0.035,0),Color("132634"))
+	_label(controls,"STATION CONTROLS",Vector3(-0.39,0.335,0.024),27,0.00059,TEAL)
+	for i in range(4):
+		var keys=["operate","balance","diagnostic","session"]
+		var titles=["OPERATE","BALANCE","ANALYZE","SESSION"]
+		menu_tab_buttons[keys[i]]=_button(controls,titles[i],"tab:"+keys[i],Vector3(-0.315+i*0.21,0.255,0.027),0.196,0.055)
+	_button(controls,"B / Y   CLOSE MENU","menu:close",Vector3(0,-0.365,0.029),0.78,0.055)
 	_rebuild_menu()
 
 func _rebuild_menu() -> void:
 	_reset_pokes()
-	for b in buttons.duplicate():
-		if b.get_meta("menu",false):
-			buttons.erase(b);b.queue_free()
-	tutorial_panel.set_panel_active(tab=="learn")
-	control_backplate.mesh.size=Vector3(0.82,0.84 if tab=="learn" else 0.76,0.025)
-	control_backplate.position.y=-0.08 if tab=="learn" else -0.04
-	for button in lesson_navigation:
-		button.visible=tab!="learn" and tutorial.active
-		button.set_enabled(button.visible)
-	if tab=="learn":
-		_refresh_tutorial();return
+	for button in buttons.duplicate():
+		if button.get_meta("menu",false):buttons.erase(button);button.queue_free()
 	var items: Array=[]
 	match tab:
-		"operate":items=[["LOAD ROTOR / CARTRIDGE","mount"],["HOME VIBRATION PROBE","home"],["CLOSE / OPEN GUARD","guard"],["RECORD BASELINE","baseline"],["STOP / CONTROLLED COAST","stop"],["EMERGENCY STOP","estop"],["RELEASE / RESET FAULT","recover"],["MODE: SINGLE / TWO PLANE","mode"]]
+		"operate":items=[["HOME VIBRATION PROBE","home"],["RECORD BASELINE","baseline"],["STOP / CONTROLLED COAST","stop"],["EMERGENCY STOP","estop"],["RELEASE / RESET FAULT","recover"],["MODE: SINGLE / TWO PLANE","mode"],["TEST SPEED: 900 /1200 /1500","speed"],["NEW SESSION · RESET LAB","new"]]
 		"balance":items=[["FIT KNOWN TRIAL +0.250 g","fit_trial"],["MEASURE TRIAL · PLANE A","trial_a"],["MEASURE TRIAL · PLANE B","trial_b"],["SOLVE INFLUENCE MATRIX","solve"],["FIT CALCULATED CORRECTION","apply"],["VERIFY CORRECTED ROTOR","verify"],["REPEATABILITY · THREE RUNS","repeat"],["ACTIVE PLANE: A / B","plane"]]
 		"diagnostic":items=[["RUN RESONANCE SPEED SWEEP","sweep"],["CHART: TIME / ORDER / SWEEP","chart"],["TEST SPEED: 900 /1200 /1500","speed"],["INJECT SENSOR DISCONNECT","fault_sensor"],["INJECT TACHOMETER LOSS","fault_tach"],["EXPLODE / ASSEMBLE FIXTURE","explode"],["MOTOR SONIFICATION: ON/OFF","sound"],["GUIDED COACH: ON / OFF","coach"]]
-		"session":items=[["SAVE TRACEABLE JSON REPORT","save"],["HANDS / REACH ASSIST: ON-OFF","assist"],["NEW SESSION · RESET LAB","new"],["LOWER STATION · SEATED","lower"],["RAISE STATION · STANDING","raise"],["MOVE BENCH: NEAR / FAR","distance"],["RECENTER STATION","recenter"],["EXIT APPLICATION","exit"]]
+		"session":items=[["SAVE TRACEABLE JSON REPORT","save"],["PAUSE / RESUME FLOATING GUIDE","tutorial:toggle"],["RESTART FLOATING GUIDE","tutorial:restart"],["SKIP CURRENT GUIDE LESSON","tutorial:skip_step"],["GUIDE AT STARTUP: ON/OFF","tutorial:startup"],["RECENTER AT WORKBENCH","recenter"],["JOYSTICK WALKING: ON/OFF","walk_toggle"],["EXIT APPLICATION","exit"]]
 	for i in items.size():
+		var caption=str(items[i][0])
+		if items[i][1]=="tutorial:startup":caption="GUIDE AT STARTUP: "+("ON" if tutorial.startup_enabled else "OFF")
+		if items[i][1]=="tutorial:toggle":caption="PAUSE FLOATING GUIDE" if tutorial.active else "RESUME FLOATING GUIDE" if guide_paused else "START FLOATING GUIDE"
+		if items[i][1]=="walk_toggle":caption="JOYSTICK WALKING: "+("ON" if walk_enabled else "OFF")
 		var color=Color("6b303b") if items[i][1]=="estop" else Color("285b4c") if items[i][1] in ["baseline","solve","verify"] else Color("244353")
-		var b=_button(controls,_wrap_text(items[i][0],22),items[i][1],Vector3(-0.195+(i%2)*0.39,0.135-(i/2)*0.115,0.029),0.37,0.095,color)
-		b.set_meta("menu",true)
+		var button=_button(controls,_wrap_text(caption,20),items[i][1],Vector3(-0.205+(i%2)*0.41,0.155-(i/2)*0.115,0.029),0.39,0.095,color)
+		button.set_meta("menu",true)
+	for key in menu_tab_buttons:
+		var button=menu_tab_buttons[key]
+		button.normal_color=Color("28735e") if key==tab else Color("244353")
+		button.set_meta("selected",key==tab);button.hover(false)
+	_sync_menu_visibility()
+
+func _sync_menu_visibility() -> void:
+	controls.visible=menu_open
+	for button in buttons:
+		if is_instance_valid(button) and button.get_meta("ui",false):button.set_enabled(menu_open)
+
+func _set_menu_open(open: bool) -> void:
+	_cancel_hand_interactions()
+	menu_open=open;reach_assist=open
+	motion_armed=false;height_armed=false
+	for entry in controllers:
+		entry.trigger_armed=false
+		entry.hand.visible=entry.tracked and not open
+		entry.controller_visual.visible=entry.tracked and open
+		if is_instance_valid(entry.beam):entry.beam.visible=false
+	if open:_place_menu()
+	else:_place_guide()
+	_sync_menu_visibility();_update_ui()
+
+func _place_menu() -> void:
+	var forward=-camera.global_basis.z;forward.y=0
+	if forward.length_squared()<0.01:forward=Vector3.FORWARD
+	forward=forward.normalized()
+	var right=forward.cross(Vector3.UP)
+	# Prefer the operator's forward space, then a clear side of the fixture.
+	for offset in [forward*0.70,forward*0.60-right*0.75,forward*0.60+right*0.75,forward*0.50-right*1.05,forward*0.50+right*1.05,forward*0.50-right*1.40,forward*0.50+right*1.40,forward*0.60-right*0.80+Vector3(0,0.50,0),forward*0.60+right*0.80+Vector3(0,0.50,0)]:
+		controls.global_position=camera.global_position+offset+Vector3(0,-0.04,0)
+		controls.look_at(camera.global_position,Vector3.UP,true)
+		if _menu_placement_clear():return
+
+func _menu_placement_clear() -> bool:
+	var bounds=AABB(controls.to_global(Vector3(-0.46,-0.44,-0.03)),Vector3.ZERO)
+	for x in [-0.46,0.46]:
+		for y in [-0.44,0.40]:
+			for z in [-0.03,0.04]:bounds=bounds.expand(controls.to_global(Vector3(x,y,z)))
+	for obstacle in [AABB(Vector3(-0.40,0.93,-1.78),Vector3(0.80,1.02,0.82)),AABB(Vector3(0.30,0.89,-1.65),Vector3(0.58,0.40,0.48)),AABB(Vector3(-0.86,0.59,-1.91),Vector3(1.72,0.32,1.12)),AABB(Vector3(-0.36,0.80,-0.91),Vector3(0.72,0.31,0.16)),AABB(Vector3(-0.94,1.97,-2.25),Vector3(1.88,1.07,0.12))]:
+		if bounds.intersects(AABB(station.to_global(obstacle.position),obstacle.size)):return false
+	return true
 
 func _build_instrument() -> void:
-	var panel=Node3D.new();panel.position=Vector3(0.99,1.40,-1.28);station.add_child(panel)
-	_box(panel,Vector3(0.87,0.95,0.024),Vector3.ZERO,Color("132634"))
-	_label(panel,"LIVE / TACH-SYNCHRONOUS ANALYZER",Vector3(-0.40,0.44,0.021),28,0.00061,TEAL)
-	readouts["speed"]=_label(panel,"0 RPM",Vector3(-0.40,0.36,0.021),59,0.00078)
-	readouts["amplitude"]=_label(panel,"A: 0.000 um    B: 0.000 um",Vector3(-0.40,0.26,0.021),30,0.00061)
-	readouts["phase"]=_label(panel,"Phase: --   /   1x synchronous peak",Vector3(-0.40,0.208,0.021),23,0.00060,DIM)
-	readouts["chart"]=_label(panel,"SPEED SWEEP / um peak vs RPM",Vector3(-0.40,0.139,0.021),23,0.00057,TEAL)
-	chart=Chart3D.new();chart.position=Vector3(-0.36,-0.195,0.024);panel.add_child(chart)
-	readouts["axis"]=_label(panel,"0           600          1200          1800 RPM",Vector3(-0.36,-0.214,0.021),21,0.00058,DIM)
-	readouts["quality"]=_label(panel,"Acquire a baseline to see measurement quality.",Vector3(-0.40,-0.273,0.021),24,0.00057,DIM)
-	readouts["solution"]=_label(panel,"Correction: measured trial runs required.",Vector3(-0.40,-0.335,0.021),24,0.00057)
-	readouts["result"]=_label(panel,"STANDBY / INTERLOCKS ACTIVE",Vector3(-0.40,-0.413,0.021),27,0.00061,TEAL)
-	var board=Node3D.new();board.position=Vector3(0,2.09,-1.95);station.add_child(board)
-	_box(board,Vector3(1.72,0.37,0.025),Vector3.ZERO,Color("10232f"))
-	readouts["coach"]=_label(board,"",Vector3(-0.80,0.14,0.022),30,0.00068)
-	readouts["status"]=_label(board,"",Vector3(-0.80,-0.028,0.022),24,0.00061,DIM)
-	readouts["method"]=_label(station,"MEASURE > IDENTIFY > CORRECT > VERIFY\nInfluence coefficients | Tach LS | Resonance | Repeatability\nIndependent synthetic training lab. No qualification claims.",Vector3(-0.88,2.68,-2.8),28,0.00072,TEAL)
-	readouts["hands"]=_label(station,"HANDS / touch buttons with the index tip. Grip nearby handles and turn dials.\nB/Y: menu · hold B/Y: reach assist · left stick: height",Vector3(-0.74,0.74,-0.82),23,0.00053,TEAL)
+	monitor=Node3D.new();monitor.name="AnalyzerMonitor";monitor.position=Vector3(0,2.50,-2.2);station.add_child(monitor)
+	_box(monitor,Vector3(1.86,1.06,0.065),Vector3(0,0,-0.02),Color("0b1118"))
+	_box(monitor,Vector3(1.78,0.98,0.008),Vector3(0,0,0.019),Color("10232f"))
+	_box(monitor,Vector3(0.10,1.98,0.08),Vector3(0,-1.50,-0.08),Color("354b58"))
+	_box(monitor,Vector3(0.55,0.025,0.33),Vector3(0,-2.47,-0.06),Color("1c303d"))
+	_label(monitor,"SPINLAB  /  TACH-SYNCHRONOUS ANALYZER",Vector3(-0.84,0.45,0.034),30,0.00070,TEAL)
+	readouts["speed"]=_label(monitor,"0 RPM",Vector3(-0.84,0.35,0.034),48,0.00075)
+	readouts["amplitude"]=_label(monitor,"",Vector3(-0.84,0.23,0.034),30,0.00066)
+	readouts["phase"]=_label(monitor,"",Vector3(-0.84,0.15,0.034),24,0.00060,DIM)
+	readouts["quality"]=_label(monitor,"",Vector3(-0.84,0.04,0.034),24,0.00059,DIM)
+	readouts["solution"]=_label(monitor,"",Vector3(-0.84,-0.08,0.034),24,0.00057)
+	readouts["result"]=_label(monitor,"",Vector3(-0.84,-0.21,0.034),25,0.00060,TEAL)
+	readouts["chart"]=_label(monitor,"",Vector3(0.03,0.34,0.034),23,0.00055,TEAL)
+	chart=Chart3D.new();chart.width_m=0.76;chart.height_m=0.43;chart.position=Vector3(0.035,-0.16,0.034);monitor.add_child(chart)
+	readouts["axis"]=_label(monitor,"",Vector3(0.035,-0.19,0.034),20,0.00054,DIM)
+	readouts["status"]=_label(monitor,"",Vector3(-0.84,-0.33,0.034),23,0.00055,DIM)
+	readouts["coach"]=_label(monitor,"",Vector3(-0.84,-0.405,0.034),22,0.00053,TEAL)
+	readouts["hands"]=_label(station,"B/Y MENU  ·  A GUIDE NEXT  ·  X BACK\nLEFT STICK HEIGHT  ·  RIGHT STICK WALK",Vector3(-0.73,0.49,-0.89),23,0.00055,TEAL)
+
+func _build_guide() -> void:
+	tutorial_panel=LessonPanel.new();tutorial_panel.name="FloatingGuide";add_child(tutorial_panel);tutorial_panel.configure()
+	guide_marker=MeshInstance3D.new();var mesh=SphereMesh.new();mesh.radius=0.012;mesh.height=0.024;guide_marker.mesh=mesh;guide_marker.material_override=_material(TEAL,true);add_child(guide_marker);guide_marker.visible=false
+	_place_guide()
+
+func _place_guide() -> void:
+	if not is_instance_valid(tutorial_panel) or not is_instance_valid(camera):return
+	var forward=-camera.global_basis.z;forward.y=0
+	if forward.length_squared()<0.01:forward=Vector3.FORWARD
+	forward=forward.normalized()
+	var right=forward.cross(Vector3.UP)
+	tutorial_panel.global_position=camera.global_position+forward*1.25-right*0.78+Vector3(0,0.28,0)
+	tutorial_panel.look_at(camera.global_position,Vector3.UP,true)
 
 func _build_dials() -> void:
 	for i in range(3):
@@ -278,7 +351,7 @@ func _build_dials() -> void:
 func _build_desktop_hud() -> void:
 	if xr_active:return
 	var layer=CanvasLayer.new();add_child(layer)
-	var label=Label.new();label.text="SPINLAB XR  /  NATIVE ENGINEERING LAB    v"+APP_VERSION+"\nDrag right mouse to orbit · Wheel to zoom · Click world controls · 1/2/3/4/5 menu tabs (5: Learn)"
+	var label=Label.new();label.text="SPINLAB XR  /  NATIVE ENGINEERING LAB    v"+APP_VERSION+"\nDrag right mouse to orbit · Wheel to zoom · Click world controls · M menu · 1/2/3/4 tabs · Space guide next · Backspace guide back"
 	label.position=Vector2(24,18);label.add_theme_font_size_override("font_size",18);label.modulate=TEAL;layer.add_child(label)
 	desktop_status=Label.new();desktop_status.position=Vector2(24,930);desktop_status.add_theme_font_size_override("font_size",16);desktop_status.modulate=DIM;layer.add_child(desktop_status)
 	var hud=HBoxContainer.new();hud.position=Vector2(24,90);layer.add_child(hud)
@@ -288,6 +361,8 @@ func _build_desktop_hud() -> void:
 func _action(command: String, input_kind: String="") -> void:
 	if command.begins_with("tutorial:"):
 		_tutorial_action(command);return
+	if command=="menu:close":_set_menu_open(false);return
+	if command=="menu:toggle":_set_menu_open(not menu_open);return
 	if not grab_owners.is_empty() and (command in ["home","mode","plane","fit_trial","apply","speed","explode"] or command.begins_with("nudge:")):
 		status="Release the held fixture control before changing its setup."
 		_update_ui();return
@@ -296,7 +371,7 @@ func _action(command: String, input_kind: String="") -> void:
 		_update_ui();return
 	if command.begins_with("tab:"):
 		tab=command.trim_prefix("tab:")
-		if tab=="learn" and not tutorial.active:tutorial.start(_tutorial_context())
+		if tab not in ["operate","balance","diagnostic","session"]:tab="operate"
 		tutorial.observe(_tutorial_context(),{"command":command,"ok":true,"input_kind":input_kind})
 		_rebuild_menu();_update_ui();return
 	if command.begins_with("nudge:"):
@@ -312,7 +387,9 @@ func _action(command: String, input_kind: String="") -> void:
 		"recover":result=model.release_estop() if model.estop else model.reset_fault()
 		"fault_sensor":result=model.inject_fault("sensor")
 		"fault_tach":result=model.inject_fault("tach")
-		"mode":result=model.set_mode("two_plane" if model.mode=="single" else "single");active_plane=0
+		"mode":
+			result=model.set_mode("two_plane" if model.mode=="single" else "single")
+			if result.ok:active_plane=0
 		"plane":active_plane=1-active_plane if model.mode=="two_plane" else 0;result.message="Editing correction plane "+("A" if active_plane==0 else "B")
 		"fit_trial":result=model.fit_trial(active_plane)
 		"solve":result=model.solve_balance()
@@ -330,8 +407,16 @@ func _action(command: String, input_kind: String="") -> void:
 		"lower":_cancel_hand_interactions();station.position.y=clampf(station.position.y-0.1,-0.5,0.3);result.message="Station lowered."
 		"raise":_cancel_hand_interactions();station.position.y=clampf(station.position.y+0.1,-0.5,0.3);result.message="Station raised."
 		"distance":_cancel_hand_interactions();station_distance=0.82 if station_distance<0.70 and station_distance>0.60 else 0.45 if station_distance>0.70 else 0.65;station.position.z=station_distance;result.message="Bench reach adjusted. Withdraw your hand before the next press."
-		"assist":reach_assist=not reach_assist;_reset_pokes();result.message="Reach assist enabled for menu buttons. Mechanical handles still require a nearby grip." if reach_assist else "Direct hands: touch buttons and grip nearby handles."
-		"recenter":_cancel_hand_interactions();station.position.y=0;XRServer.center_on_hmd(XRServer.RESET_BUT_KEEP_TILT,true) if xr_active else _desktop_camera();result.message="Station recentered."
+		"assist":_set_menu_open(not menu_open);return
+		"walk_toggle":walk_enabled=not walk_enabled;motion_armed=false;result.message="Joystick walking "+("enabled" if walk_enabled else "disabled")
+		"recenter":
+			_cancel_hand_interactions();rig.position=Vector3.ZERO;station.position.y=0;motion_armed=false;height_armed=false
+			if xr_active:XRServer.center_on_hmd(XRServer.RESET_BUT_KEEP_TILT,true)
+			else:_desktop_camera()
+			recenter_pending_frames=2
+			if menu_open:_place_menu()
+			else:_place_guide()
+			result.message="Returned to the workbench. Release the sticks before moving again."
 		"method":result.message="Baseline → known trial per plane → solve A·C = −V₀ → remove trial → fit solution → verify."
 		"exit":get_tree().quit();return
 		_:return
@@ -343,48 +428,51 @@ func _dial_value(kind: String) -> float:
 	return float(model.sensor_position_mm) if kind=="probe" else float(model.masses[active_plane]) if kind=="mass" else float(model.angles[active_plane])
 
 func _tutorial_context() -> Dictionary:
-	return {"mounted":model.mounted,"homed":model.homed,"guard_closed":model.guard_closed,"estop":model.estop,"fault":model.fault,"rpm":model.rpm,"running":model.running,"processing":model.processing,"sensor_position_mm":model.sensor_position_mm,"masses":model.masses.duplicate(),"angles":model.angles.duplicate(),"mode":model.mode,"active_plane":active_plane,"test_rpm":model.test_rpm,"radius_mm":model.radius_mm,"records":model.records,"baseline":model.baseline,"trial_a":model.trial_a,"trial_b":model.trial_b,"solution":model.solution,"latest":model.latest,"tab":tab,"chart_kind":chart_kind,"reach_assist":reach_assist,"exploded":exploded,"sound_on":sound_on,"coach":coach,"saved_report":not saved_path.is_empty() and FileAccess.file_exists(saved_path),"grab_owners_empty":grab_owners.is_empty()}
+	return {"mounted":model.mounted,"homed":model.homed,"guard_closed":model.guard_closed,"estop":model.estop,"fault":model.fault,"rpm":model.rpm,"running":model.running,"processing":model.processing,"sensor_position_mm":model.sensor_position_mm,"masses":model.masses.duplicate(),"angles":model.angles.duplicate(),"mode":model.mode,"active_plane":active_plane,"test_rpm":model.test_rpm,"radius_mm":model.radius_mm,"records":model.records,"baseline":model.baseline,"trial_a":model.trial_a,"trial_b":model.trial_b,"solution":model.solution,"latest":model.latest,"tab":tab,"chart_kind":chart_kind,"reach_assist":reach_assist,"exploded":exploded,"sound_on":sound_on,"coach":coach,"saved_report":not saved_path.is_empty() and FileAccess.file_exists(saved_path),"grab_owners_empty":grab_owners.is_empty(),"menu_open":menu_open,"walk_distance_m":walk_distance_m,"height_changed":height_changed}
 
 func _refresh_tutorial() -> void:
 	if tutorial==null or not is_instance_valid(tutorial_panel):return
 	var view=tutorial.view(_tutorial_context())
-	view["startup_enabled"]=tutorial.startup_enabled
-	view["can_back"]=tutorial.index>0
 	tutorial_panel.update_view(view)
-	for button in lesson_navigation:
-		button.visible=tab!="learn" and tutorial.active
-		button.set_enabled(button.visible)
-	lesson_navigation[0].set_caption("LESSON / NEXT" if view.ready else "OPEN LESSON")
+	tutorial_panel.set_panel_active(tutorial.active and not menu_open and (not xr_active or _head_tracking_valid()))
+	if view.id!=guide_step_id:
+		guide_step_id=view.id
+	var offset=tutorial_panel.global_position-camera.global_position
+	if tutorial.active and (offset.length()>2.6 or offset.normalized().dot(-camera.global_basis.z)<-0.1):_place_guide()
+	guide_marker.visible=false
+	for button in buttons:
+		if is_instance_valid(button):button.guide_highlight=false
+	if tutorial.active and not menu_open:
+		var target: Node3D=null
+		match str(view.target):
+			"rotor","mount":target=geometry.rotor_grab
+			"guard":target=geometry.guard_handle
+			"dial:probe":target=geometry.probe_grab
+		if is_instance_valid(target) and target.is_visible_in_tree():
+			guide_marker.global_position=target.global_position+Vector3(0,0.08,0);guide_marker.visible=true
 
 func _tutorial_action(command: String) -> void:
 	var context=_tutorial_context()
 	match command:
-		"tutorial:skip":
-			tutorial.skip();tab="operate";status="Tutorial paused. Open Learn to restart; startup preference is unchanged."
+		"tutorial:skip":tutorial.skip();guide_paused=true;status="Guide paused. Resume it from Session in the B/Y menu."
+		"tutorial:toggle":
+			if tutorial.active:tutorial.skip();guide_paused=true;status="Guide paused."
+			elif guide_paused:tutorial.active=true;guide_paused=false;tutorial.observe(context);status="Guide resumed. Close the menu to continue."
+			else:tutorial.start(context);status="Floating guide started. Close the menu to follow it."
 		"tutorial:startup":
 			var result=tutorial.set_startup(not tutorial.startup_enabled)
-			status="Tutorial at startup: "+("ON" if tutorial.startup_enabled else "OFF") if result.ok else result.message
-		"tutorial:restart":
-			tutorial.start(context);tab="learn";status="Tutorial restarted. Your lab measurements are preserved."
+			status="Guide at startup: "+("ON" if tutorial.startup_enabled else "OFF") if result.ok else result.message
+		"tutorial:restart":tutorial.start(context);guide_paused=false;status="Floating guide restarted. Lab measurements are preserved."
 		"tutorial:practice":
-			var target_tab=str(tutorial.view(context).get("practice_tab",""))
-			if target_tab.is_empty():return
-			tab=target_tab
-			status="Follow the lesson on the coach board. Open Learn / Next when ready."
-		"tutorial:back":
-			status=tutorial.back().message;tab="learn"
-		"tutorial:skip_step":
-			var result=tutorial.skip_step()
-			status=result.message;tab="operate" if result.get("finished",false) else "learn"
-		"tutorial:next","tutorial:open_next":
-			var result=tutorial.next(context)
-			status=result.get("message","")
-			tab="operate" if result.get("finished",false) else "learn"
-		"tutorial:touch":
-			tutorial.observe(context,{"command":"tutorial:touch","ok":true})
-			status="Practice press registered. Withdraw your finger to release the button."
+			_set_menu_open(false);status="Use the illuminated physical station controls. A continues; X goes back."
+		"tutorial:back":status=tutorial.back().message
+		"tutorial:skip_step":status=tutorial.skip_step().message
+		"tutorial:next","tutorial:open_next":status=tutorial.next(context).get("message","")
+		"tutorial:touch":tutorial.observe(context,{"command":"tutorial:touch","ok":true})
 		_:return
-	_rebuild_menu();_update_ui()
+	if command in ["tutorial:restart","tutorial:toggle"]:_place_guide()
+	if menu_open:_rebuild_menu()
+	_update_ui()
 
 func _tutorial_report() -> Dictionary:
 	var view=tutorial.view(_tutorial_context())
@@ -402,7 +490,7 @@ func _set_dial(kind: String, value: float) -> void:
 func _coach_text(t: Dictionary) -> String:
 	if tutorial!=null and tutorial.active:
 		var lesson=tutorial.view(_tutorial_context())
-		return "%s / %s\n%s"%[lesson.progress,lesson.title,"Ready: open Learn / Next to continue." if lesson.ready else lesson.hint]
+		return "%s / %s · %s"%[lesson.progress,lesson.title,"A: continue" if lesson.ready else "Follow the floating guide"]
 	if not coach:return "EXPERT LAB / "+model.mode.replace("_"," ").to_upper()+" / Active correction plane "+("A" if active_plane==0 else "B")
 	if t.get("fault","")!="":return "FAULT RECOVERY / wait for zero speed; release E-stop, close guard, then reset."
 	if t.get("running",false):return "ACQUIRING / keep guard closed. Tach reference separates 1× vibration from noise."
@@ -427,7 +515,7 @@ func _update_ui() -> void:
 	var phase_a="%.1f°"%float(phases[0]) if observable[0] else "--"
 	var phase_b="%.1f°"%float(phases[1]) if observable[1] else "--"
 	readouts.phase.text="Phase A %s / B %s   ·  1× peak"%[phase_a,phase_b]
-	readouts.coach.text=_wrap_text(_coach_text(t),92)
+	readouts.coach.text=_wrap_text(_coach_text(t),100)
 	readouts.status.text=_wrap_text(status,113)
 	readouts.probe.text="PROBE\n%.2f mm"%model.sensor_position_mm
 	readouts.mass.text="MASS %s\n%.3f g"%["A" if active_plane==0 else "B",model.masses[active_plane]]
@@ -492,46 +580,60 @@ func _update_chart() -> void:
 
 func _save_report() -> void:
 	var stamp=Time.get_datetime_string_from_system().replace(":","-")
-	var directory="user://reports"
-	DirAccess.make_dir_recursive_absolute(directory)
+	var directory=report_directory
+	var directory_error=DirAccess.make_dir_recursive_absolute(directory)
+	if directory_error!=OK:
+		saved_path="";status="Report directory is unavailable: "+error_string(directory_error);_update_ui();return
 	saved_path=directory+"/spinlab-"+stamp+"-"+str(Time.get_ticks_usec())+".json"
 	var report=model.report();report["application"]="SpinLab XR";report["version"]=APP_VERSION;report["captured_at"]=Time.get_datetime_string_from_system();report["xr_active"]=xr_active
-	report["interaction_mode"]="touch-controller virtual hands; direct fingertip presses and nearby grips"
+	report["interaction_mode"]="touch-controller virtual hands for physical controls; controller pointers for an explicit menu"
+	report["operator_navigation"]={"walk_distance_m":walk_distance_m,"walking_enabled":walk_enabled,"height_m":station.position.y,"menu_open":menu_open}
 	report["interaction_events"]=interaction_events.duplicate(true)
 	report["runtime_samples"]=runtime_samples.duplicate(true)
 	report["runtime_note"]="Application-loop timing samples; not compositor, GPU-frame-time, or comfort acceptance."
 	report["tutorial"]=_tutorial_report()
 	var file=FileAccess.open(saved_path,FileAccess.WRITE)
 	if file:
-		file.store_string(JSON.stringify(report,"\t"));file.close()
-		status="REPORT SAVED / "+ProjectSettings.globalize_path(saved_path)
-		tutorial.observe(_tutorial_context(),{"command":"save","ok":true})
-	else:status="Report could not be written: "+str(FileAccess.get_open_error())
-	print("SPINLAB_REPORT ",ProjectSettings.globalize_path(saved_path))
+		file.store_string(JSON.stringify(report,"\t"));file.flush()
+		var write_error=file.get_error();file.close()
+		if write_error==OK:
+			status="REPORT SAVED / "+ProjectSettings.globalize_path(saved_path)
+			tutorial.observe(_tutorial_context(),{"command":"save","ok":true})
+			print("SPINLAB_REPORT ",ProjectSettings.globalize_path(saved_path))
+		else:
+			DirAccess.remove_absolute(saved_path);saved_path="";status="Report write failed: "+error_string(write_error)
+	else:
+		status="Report could not be written: "+str(FileAccess.get_open_error());saved_path=""
 	_update_ui()
 
 func _controller_pressed(input_name: String, entry: Dictionary) -> void:
+	if not input_focused:return
 	if input_name=="by_button":
-		entry.by_started=Time.get_ticks_msec();entry.by_handled=false
-	if input_name=="ax_button":_action("chart")
-	if input_name=="trigger_click" and reach_assist and entry.get("tracked",false) and entry.held=="":
-		var ray=entry.ray;ray.force_raycast_update()
+		_set_menu_open(not menu_open);return
+	if input_name=="ax_button" and not menu_open:
+		if tutorial.active:
+			_tutorial_action("tutorial:back" if str(entry.node.tracker)=="left_hand" else "tutorial:next")
+		return
+	if input_name=="trigger_click" and menu_open and entry.get("tracked",false) and entry.get("aim_tracked",false) and entry.get("trigger_armed",false):
+		entry.trigger_armed=false
+		var ray=entry.ray
+		if not is_instance_valid(ray):return
+		ray.force_raycast_update()
 		if ray.is_colliding():
 			var target=ray.get_collider()
-			if target is LabButton and target.enabled and target.is_visible_in_tree():
-				_physical_action(str(target.get_meta("action","")),"reach_assist");_haptic(entry,0.22)
+			if target is LabButton and target.get_meta("ui",false) and target.enabled and target.is_visible_in_tree():
+				_physical_action(target.action,"pointer");_haptic(entry,0.22)
 
 func _controller_released(input_name: String, entry: Dictionary) -> void:
-	if input_name=="by_button" and entry.by_started>=0:
-		if not entry.by_handled and Time.get_ticks_msec()-entry.by_started<850:
-			var tabs=["operate","balance","diagnostic","session","learn"]
-			_action("tab:"+tabs[(tabs.find(tab)+1)%tabs.size()])
-		entry.by_started=-1
+	if input_name=="trigger_click" and input_focused and entry.get("tracked",false) and entry.get("aim_tracked",false):entry.trigger_armed=true
 
 func _make_hand_entry(controller: Node3D, grip_node: Node3D) -> Dictionary:
-	var hand=HandVisual.new();hand.configure(str(controller.tracker) if controller is XRController3D else "right_hand");grip_node.add_child(hand)
+	var side=str(controller.tracker) if controller.get("tracker")!=null else "right_hand"
+	var hand=HandVisual.new();hand.configure(side);grip_node.add_child(hand)
+	var controller_visual=ControllerVisual.new();controller_visual.configure(side);grip_node.add_child(controller_visual);controller_visual.visible=false
 	var hint=Label3D.new();hint.font_size=25;hint.pixel_size=0.00065;hint.position=Vector3(0.08,0.04,0.04);hint.modulate=TEAL;hint.outline_size=0;hint.billboard=BaseMaterial3D.BILLBOARD_ENABLED;grip_node.add_child(hint)
-	return {"node":controller,"grip_node":grip_node,"hand":hand,"hint":hint,"held":"","held_target":null,"dial":"","raw":0.0,"contacts":{},"near":null,"tracked":false,"grip_down":false,"grip_armed":false,"by_started":-1,"by_handled":false,"ray":null,"beam":null}
+	var reticle=MeshInstance3D.new();var sphere=SphereMesh.new();sphere.radius=0.005;sphere.height=0.010;reticle.mesh=sphere;reticle.material_override=_material(TEAL,true);controller.add_child(reticle);reticle.visible=false
+	return {"node":controller,"grip_node":grip_node,"hand":hand,"controller_visual":controller_visual,"reticle":reticle,"hint":hint,"held":"","held_target":null,"dial":"","raw":0.0,"contacts":{},"near":null,"tracked":false,"aim_tracked":false,"trigger_armed":false,"grip_down":false,"grip_armed":false,"by_started":-1,"by_handled":false,"ray":null,"beam":null}
 
 func _haptic(entry: Dictionary, amplitude: float=0.25) -> void:
 	if xr_active and entry.node is XRController3D:entry.node.trigger_haptic_pulse("haptic",0,amplitude,0.035,0)
@@ -540,10 +642,11 @@ func _interaction_event(kind: String, target: String) -> void:
 	interaction_events.append({"time_s":model.time,"kind":kind,"target":target})
 	if interaction_events.size()>512:interaction_events.pop_front()
 	print("SPINLAB_INTERACTION ",kind," ",target)
-	if tutorial!=null:tutorial.observe(_tutorial_context(),{"kind":kind,"target":target,"ok":kind not in ["fingertip","reach_assist"]})
+	if tutorial!=null:tutorial.observe(_tutorial_context(),{"kind":kind,"target":target,"ok":kind not in ["fingertip","reach_assist","pointer"]})
 
 func _physical_action(command: String, input_kind: String="fingertip") -> void:
 	_interaction_event(input_kind,command)
+	if input_kind=="fingertip":tutorial.observe(_tutorial_context(),{"command":"tutorial:touch","ok":true})
 	if command=="mount":status="Reach the tray rotor and hold grip. Carry it upright onto the spindle, then release.";return
 	if command=="guard":status="Grip the orange enclosure handle nearby. Lift to open; lower fully to latch.";return
 	_action(command,input_kind)
@@ -555,11 +658,11 @@ func _reset_pokes() -> void:
 		if is_instance_valid(button):button.set_depression(0.0);button.hover(false)
 
 func _process_pokes(entry: Dictionary, tip: Vector3, delta: float, tracked: bool=true) -> void:
-	if not tracked or entry.held!="" or entry.grip_down:
+	if not tracked or menu_open or entry.held!="":
 		entry.contacts.clear();return
 	var alive: Dictionary={}
 	for button in buttons.duplicate():
-		if not is_instance_valid(button) or button.is_queued_for_deletion() or not button.enabled or not button.is_visible_in_tree():continue
+		if not is_instance_valid(button) or button.is_queued_for_deletion() or not button.enabled or not button.is_visible_in_tree() or not button.get_meta("physical",false):continue
 		var id=button.get_instance_id();alive[id]=true
 		if not entry.contacts.has(id):entry.contacts[id]=DirectContact.PushContact.new()
 		var point=button.to_local(tip)-Vector3(0,0,button.front_z_m)
@@ -613,7 +716,7 @@ func _grab_resource(target: Node3D) -> Variant:
 	return "dial:"+str(target.get_meta("dial")) if str(target.get_meta("grab_kind",""))=="dial" else target.get_instance_id()
 
 func _begin_near_grab(entry: Dictionary, palm: Vector3) -> bool:
-	if entry.held!="":return false
+	if menu_open or entry.held!="":return false
 	var target=_find_near_grabbable(palm)
 	if target==null:return false
 	if model.running or model.processing or model.rpm>0.1:
@@ -687,15 +790,20 @@ func _release_near_grab(entry: Dictionary, cancelled: bool=false) -> void:
 
 func _cancel_hand_interactions() -> void:
 	for entry in controllers:
-		_release_near_grab(entry,true);entry.grip_armed=false;entry.grip_down=false;entry.by_started=-1;entry.by_handled=false
+		_release_near_grab(entry,true);entry.grip_armed=false;entry.grip_down=false;entry.by_started=-1;entry.by_handled=false;entry.trigger_armed=false
 	_reset_pokes()
 
 func _set_xr_focus(focused: bool) -> void:
 	xr_has_focus=focused
 	_apply_input_focus()
 
+func _on_pose_recentered() -> void:
+	_cancel_hand_interactions();motion_armed=false;height_armed=false;recenter_pending_frames=2
+
 func _apply_input_focus() -> void:
 	input_focused=app_has_focus and xr_has_focus
+	motion_armed=false;height_armed=false
+	guide_anchor_pending=true
 	_cancel_hand_interactions()
 	if not input_focused and is_instance_valid(model) and (model.running or model.processing):
 		model.stop()
@@ -709,15 +817,37 @@ func _update_controllers(delta: float) -> void:
 		var c=entry.node
 		var pose=entry.grip_node.get_pose()
 		var tracked=input_focused and entry.grip_node.get_has_tracking_data() and pose!=null and pose.tracking_confidence==XRPose.XR_TRACKING_CONFIDENCE_HIGH
-		entry.tracked=tracked
-		entry.hand.visible=tracked;entry.hint.visible=tracked
+		var aim_tracked=tracked
+		if c.has_method("get_has_tracking_data"):
+			var aim_pose=c.get_pose()
+			aim_tracked=tracked and c.get_has_tracking_data() and aim_pose!=null and aim_pose.tracking_confidence==XRPose.XR_TRACKING_CONFIDENCE_HIGH
+		entry.tracked=tracked;entry.aim_tracked=aim_tracked
+		if not aim_tracked:entry.trigger_armed=false
+		entry.hand.visible=tracked and not menu_open
+		entry.controller_visual.visible=tracked and menu_open
+		entry.hint.visible=tracked and not menu_open
+		entry.reticle.visible=false
+		if is_instance_valid(entry.beam):entry.beam.visible=false
 		if not tracked:
-			_release_near_grab(entry,true);entry.contacts.clear();entry.grip_down=false;entry.grip_armed=false
-			entry.beam.visible=false;continue
+			_release_near_grab(entry,true);entry.contacts.clear();entry.grip_down=false;entry.grip_armed=false;entry.trigger_armed=false
+			continue
 		if not entry.get("logged_ready",false):
-			entry.logged_ready=true
-			print("SPINLAB_CONTROLLER_READY tracker=",c.tracker," pose=grip hands=visible direct=true")
+			entry.logged_ready=true;print("SPINLAB_CONTROLLER_READY tracker=",c.tracker," hands_or_pointer=true")
 		var grip=c.get_float("grip");var trigger=c.get_float("trigger")
+		if aim_tracked and trigger<0.2:entry.trigger_armed=true
+		if menu_open:
+			entry.contacts.clear();entry.grip_armed=false;entry.grip_down=false
+			entry.controller_visual.set_pose(trigger,grip)
+			if aim_tracked and is_instance_valid(entry.ray) and is_instance_valid(entry.beam):
+				entry.ray.force_raycast_update()
+				var length=3.0
+				if entry.ray.is_colliding():
+					var target=entry.ray.get_collider()
+					if target is LabButton and target.enabled and target.is_visible_in_tree():
+						target.hover(true);length=c.global_position.distance_to(entry.ray.get_collision_point())
+						entry.reticle.global_position=entry.ray.get_collision_point();entry.reticle.visible=true
+				entry.beam.mesh.height=length;entry.beam.position.z=-length/2;entry.beam.visible=true
+			continue
 		if grip<0.2:entry.grip_armed=true
 		var down=grip>0.2 if entry.grip_down else grip>=0.65
 		if down and not entry.grip_down and entry.grip_armed:
@@ -730,18 +860,49 @@ func _update_controllers(delta: float) -> void:
 		var near=_find_near_grabbable(entry.hand.palm_global()) if entry.held=="" else null
 		entry.near=near
 		entry.hint.text="HOLD / "+entry.held.to_upper() if entry.held!="" else "GRIP / "+str(near.get_meta("grab_kind","")).to_upper() if is_instance_valid(near) else ""
-		entry.beam.visible=reach_assist and entry.held==""
-		if entry.beam.visible:
-			entry.ray.force_raycast_update()
-			if entry.ray.is_colliding() and entry.ray.get_collider() is LabButton:
-				var target=entry.ray.get_collider()
-				if target.enabled and target.is_visible_in_tree():target.hover(true)
-		if entry.by_started>=0 and not entry.by_handled and Time.get_ticks_msec()-entry.by_started>=850:
-			entry.by_handled=true;_action("assist");_haptic(entry,0.3)
-		var stick=c.get_vector2("primary")
-		if c.tracker==StringName("left_hand") and absf(stick.y)>0.75 and grab_owners.is_empty():
-			_reset_pokes();station.position.y=clampf(station.position.y+stick.y*delta*0.25,-0.5,0.3)
+	_update_navigation(delta)
 	_finish_pokes()
+
+func _update_navigation(delta: float) -> void:
+	if not input_focused or menu_open or not grab_owners.is_empty() or not _head_tracking_valid():
+		motion_armed=false;height_armed=false;return
+	var left: Dictionary={};var right: Dictionary={}
+	for entry in controllers:
+		if str(entry.node.tracker)=="left_hand":left=entry
+		if str(entry.node.tracker)=="right_hand":right=entry
+	if not left.is_empty() and left.tracked:
+		var stick=left.node.get_vector2("primary")
+		if absf(stick.y)<0.2:height_armed=true
+		if height_armed and absf(stick.y)>0.35:
+			var previous=station.position.y
+			station.position.y=clampf(previous+stick.y*minf(delta,0.05)*0.25,-0.5,0.3)
+			if not is_equal_approx(previous,station.position.y):
+				height_changed=true;_reset_pokes();tutorial.observe(_tutorial_context(),{"command":"height","ok":true})
+	else:height_armed=false
+	if right.is_empty() or not right.tracked or not walk_enabled:
+		motion_armed=false;return
+	var stick=right.node.get_vector2("primary")
+	if stick.length()<Navigation.DEADZONE:motion_armed=true
+	if not motion_armed:return
+	var step=Navigation.movement(stick,-camera.global_basis.z,delta)
+	if step.length_squared()<0.0000001:return
+	var current=camera.global_position
+	var allowed=Navigation.constrain_motion(current,step,station.to_global(Vector3(0,0,-1.4)),Vector2(0.85,0.475),0.18)
+	var applied=allowed-current;applied.y=0
+	if applied.length_squared()>0.0000001:
+		rig.global_position+=applied
+		tutorial_panel.global_position+=applied
+		walk_distance_m+=applied.length();_reset_pokes()
+		tutorial.observe(_tutorial_context(),{"command":"walk","ok":true})
+
+func _head_tracking_valid() -> bool:
+	if head_tracking_override!=null:return bool(head_tracking_override)
+	if not camera.global_transform.is_finite():return false
+	if not xr_active:return true
+	var tracker=XRServer.get_tracker("head")
+	if not tracker is XRPositionalTracker:return false
+	var pose=tracker.get_pose("default")
+	return pose!=null and pose.has_tracking_data and pose.tracking_confidence==XRPose.XR_TRACKING_CONFIDENCE_HIGH
 
 func _desktop_camera() -> void:
 	if xr_active:return
@@ -760,7 +921,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			if not hit.is_empty() and hit.collider.is_visible_in_tree() and (not hit.collider is LabButton or hit.collider.enabled):_action(str(hit.collider.get_meta("action","")))
 	if event is InputEventMouseMotion and mouse_drag:desktop_yaw-=event.relative.x*0.004;desktop_pitch=clampf(desktop_pitch-event.relative.y*0.003,-0.9,0.15);_desktop_camera()
 	if event is InputEventKey and event.pressed:
-		if event.keycode in [KEY_1,KEY_2,KEY_3,KEY_4,KEY_5]:_action("tab:"+["operate","balance","diagnostic","session","learn"][event.keycode-KEY_1])
+		if event.keycode in [KEY_1,KEY_2,KEY_3,KEY_4]:_action("tab:"+["operate","balance","diagnostic","session"][event.keycode-KEY_1])
+		if event.keycode==KEY_M:_set_menu_open(not menu_open)
+		if event.keycode==KEY_SPACE:_tutorial_action("tutorial:next")
+		if event.keycode==KEY_BACKSPACE:_tutorial_action("tutorial:back")
 
 func _setup_sound() -> void:
 	audio=AudioStreamPlayer3D.new();audio.position=Vector3(0,1.1,-1.4);station.add_child(audio)
@@ -777,6 +941,16 @@ func _update_sound() -> void:
 		audio_playback.push_frame(Vector2(value,value))
 
 func _process(delta: float) -> void:
+	if not input_focused or not _head_tracking_valid():guide_anchor_pending=true
+	elif guide_anchor_pending:
+		guide_anchor_pending=false
+		if menu_open:_place_menu()
+		else:_place_guide()
+	if recenter_pending_frames>0:
+		recenter_pending_frames-=1
+		if recenter_pending_frames==0:
+			if menu_open:_place_menu()
+			else:_place_guide()
 	model.tick(minf(delta,0.05))
 	var t={"rpm":model.rpm,"time":model.time,"mounted":model.mounted,"guard_closed":model.guard_closed,"sensor_position_mm":model.sensor_position_mm,"masses":model.masses,"angles":model.angles,"mode":model.mode}
 	geometry.update_state(t)

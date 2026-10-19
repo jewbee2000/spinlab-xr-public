@@ -12,6 +12,10 @@ var guard_handle: StaticBody3D
 var rotor_grab: StaticBody3D
 var probe_grab: StaticBody3D
 var probe_home_button: StaticBody3D
+var physical_buttons: Array = []
+var physical_by_action: Dictionary = {}
+var operating_console: Node3D
+var monitor_mount: Node3D
 var guard_preview := -1.0
 var guard_travel_m := 0.43
 var _guard_closed := false
@@ -43,6 +47,11 @@ func _ready() -> void:
 	_build_guard()
 	_build_probe()
 	_build_tray()
+	_build_operating_console()
+	monitor_mount=Node3D.new()
+	monitor_mount.name="AnalyzerMonitorMount"
+	monitor_mount.position=Vector3(0,2.50,-2.2)
+	add_child(monitor_mount)
 	_built = true
 	update_state({"rpm": 0.0, "time": 0.0, "mounted": false, "guard_closed": false,
 		"sensor_position_mm": 0.0, "masses": [], "angles": [], "mode": "single"})
@@ -277,6 +286,10 @@ func _build_probe() -> void:
 	probe.add_child(probe_home_button)
 	probe_home_button.position = Vector3(0.025, 0.065, 0.14)
 	probe_home_button.configure("HOME", "home", 0.085, 0.042, Color("285b4c"))
+	probe_home_button.text_label.font_size=24
+	probe_home_button.text_label.pixel_size=0.00070
+	probe_home_button.set_meta("physical",true)
+	physical_buttons.append(probe_home_button)
 	_label(probe, "PROBE  /  HOME", Vector3(0, 0.002, 0.155), 0.0003, "white")
 	_label(probe, "10 µm / DIV", Vector3(0.21, 0.12, 0.06), 0.00025, "muted")
 	# Cable is a deliberately simplified routed harness, without costly physics.
@@ -304,6 +317,68 @@ func _build_tray() -> void:
 	var bolt_tray := _box(tray, "CorrectionMassKit", Vector3(0.19, 0.026, 0.055), Vector3(0, 0.035, 0.19), "black")
 	for i in range(4):
 		_box(bolt_tray, "MassKit%d" % i, Vector3(0.026, 0.012, 0.03), Vector3(-0.06 + i * 0.04, 0.02, 0), "amber")
+
+
+func _build_operating_console() -> void:
+	# A real bench apron rather than a floating menu. Its upward-facing slope
+	# leaves the tray, lift handle, spindle, probe, and front dials unobstructed.
+	operating_console=Node3D.new()
+	operating_console.name="PhysicalOperatingConsole"
+	operating_console.position=Vector3(0,0.70,-0.84)
+	operating_console.rotation.x=deg_to_rad(-35)
+	add_child(operating_console)
+	_box(operating_console,"ConsoleChassis",Vector3(1.64,0.30,0.060),Vector3.ZERO,"navy")
+	_box(operating_console,"ConsoleFaceplate",Vector3(1.61,0.276,0.007),Vector3(0,0,0.034),"black")
+	_box(operating_console,"ConsoleAccent",Vector3(1.55,0.003,0.003),Vector3(0,-0.130,0.040),"cyan")
+	for x in [-0.615,-0.211,0.394]:
+		_box(operating_console,"ConsoleGroupDivider",Vector3(0.002,0.23,0.002),Vector3(x,0.004,0.040),"steel")
+	for x in [-0.78,0.78]:
+		for y in [-0.123,0.123]:
+			var fastener=_cylinder(operating_console,"ConsoleCaptiveFastener",0.0045,0.004,Vector3(x,y,0.041),"steel")
+			fastener.rotation.x=PI/2
+	_label(operating_console,"DRIVE",Vector3(-0.711,0.115,0.043),0.00048,"white")
+	_label(operating_console,"PREPARE / RUN",Vector3(-0.405,0.115,0.043),0.00048,"cyan")
+	_label(operating_console,"BALANCE / IDENTIFY + CORRECT",Vector3(0.085,0.115,0.043),0.00046,"cyan")
+	_label(operating_console,"ANALYZE / SESSION",Vector3(0.598,0.125,0.043),0.00043,"cyan")
+	var emergency=_console_button("E-STOP","estop",Vector3(-0.711,0.002,0.058),0.138,0.105,Color("a8333c"))
+	var mushroom := CylinderMesh.new()
+	mushroom.top_radius=0.052;mushroom.bottom_radius=0.052;mushroom.height=0.018
+	mushroom.radial_segments=24
+	emergency.face.mesh=mushroom
+	emergency.face.rotation.x=PI/2
+	emergency.front_z_m=0.009
+	emergency.text_label.font_size=29
+	emergency.text_label.pixel_size=0.00063
+	var halo=_torus(operating_console,"EmergencyStopBackingRing",0.056,0.066,Vector3(-0.711,0.002,0.046),"amber")
+	halo.rotation.x=PI/2
+	_label(operating_console,"LATCH / RESET",Vector3(-0.711,-0.101,0.043),0.00034,"white")
+	var run := [["HOME","home"],["BASELINE","baseline"],["STOP","stop"],["RESET /\nRELEASE","recover"]]
+	for i in range(run.size()):
+		var pos=Vector3(-0.500+(i%2)*0.190,0.053-(i/2)*0.106,0.054)
+		_console_button(run[i][0],run[i][1],pos,0.170,0.072,Color("285b4c") if i==1 else Color("244353"))
+	var balance := [["FIT\nTRIAL","fit_trial"],["MEASURE\nTRIAL A","trial_a"],["MEASURE\nTRIAL B","trial_b"],["SOLVE","solve"],["APPLY\nCORRECTION","apply"],["VERIFY","verify"]]
+	for i in range(balance.size()):
+		var pos=Vector3(-0.110+(i%3)*0.195,0.053-(i/3)*0.106,0.054)
+		_console_button(balance[i][0],balance[i][1],pos,0.170,0.072,Color("285b4c") if i in [3,5] else Color("244353"))
+	var analysis := [["REPEAT","repeat"],["SWEEP","sweep"],["PLANE A/B","plane"],["MODE","mode"],["CHART","chart"],["SAVE REPORT","save"]]
+	for i in range(analysis.size()):
+		var pos=Vector3(0.505+(i%2)*0.185,0.075-(i/2)*0.075,0.054)
+		_console_button(analysis[i][0],analysis[i][1],pos,0.160,0.054,Color("244353"))
+
+
+func _console_button(caption: String, command: String, pos: Vector3, width: float, height: float, color: Color):
+	var button=preload("res://scripts/lab_button.gd").new()
+	button.name="Physical_"+command
+	operating_console.add_child(button)
+	button.position=pos
+	button.configure(caption,command,width,height,color)
+	button.text_label.font_size=25 if height>0.06 else 23
+	button.text_label.pixel_size=0.00068
+	button.set_meta("physical",true)
+	button.set_meta("console",true)
+	physical_buttons.append(button)
+	physical_by_action[command]=button
+	return button
 
 
 func update_state(t: Dictionary) -> void:

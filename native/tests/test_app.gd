@@ -77,13 +77,14 @@ func _sync_ui() -> void:
 
 
 func _test_world_controls() -> void:
+	app._set_menu_open(true)
 	for menu in ["operate", "balance", "diagnostic", "session"]:
 		_tab(menu)
 		var menu_count := 0
 		for button in app.buttons:
 			_check(button is StaticBody3D, "World button is ray-collidable")
 			_check(not str(button.get_meta("action", "")).is_empty(), "World button has an action")
-			_check((button.collision_layer & 1) == (1 if button.enabled and button.is_visible_in_tree() else 0), "Only visible enabled buttons use controller collision layer")
+			_check(button.collision_layer == (button.interaction_layer if button.enabled and button.is_visible_in_tree() else 0), "Only visible enabled buttons use controller collision layer")
 			var shapes: Array = button.find_children("*", "CollisionShape3D", false, false)
 			_check(not shapes.is_empty() and shapes[0].shape != null, "World button has a collision shape")
 			_check(is_instance_valid(button.face) and is_instance_valid(button.text_label), "World button has a visible face and caption")
@@ -105,6 +106,7 @@ func _test_world_controls() -> void:
 
 
 func _test_action_map() -> void:
+	app._set_menu_open(false)
 	var action_map = load("res://openxr_action_map.tres")
 	_check(action_map != null, "Packaged OpenXR action map loads")
 	if action_map == null:
@@ -154,7 +156,7 @@ func _acquire(command: String) -> bool:
 func _guard(closed: bool) -> void:
 	if app.model.guard_closed != closed:
 		_tab("operate")
-		_click("guard")
+		app._action("guard")
 	_check(app.model.guard_closed == closed, "Guard is " + ("closed" if closed else "open"))
 
 
@@ -166,7 +168,7 @@ func _check_chart(kind: String) -> void:
 
 
 func _test_balance_workflow(two_plane: bool) -> void:
-	_tab("session")
+	_tab("operate")
 	_click("new")
 	app.model.async_processing = false
 	_check(not app.model.mounted and app.model.records.is_empty(), "Session reset clears fixture and records")
@@ -175,7 +177,7 @@ func _test_balance_workflow(two_plane: bool) -> void:
 		_click("mode")
 	_check(app.model.mode == ("two_plane" if two_plane else "single"), "Requested balancing method selected")
 	_tab("operate")
-	_click("mount")
+	app._action("mount")
 	_click("home")
 	_check(app.model.mounted and app.model.homed, "Load and home commands prepare fixture")
 	_guard(true)
