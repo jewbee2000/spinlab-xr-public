@@ -26,7 +26,7 @@ func sync(view: Dictionary, can_play: bool) -> void:
 	if not view.get("active",false):
 		if player:player.stop();player.stream=null
 		current_id="";completed=true;return
-	var step_id=str(view.get("id",""))
+	var step_id=str(view.get("voice_id",view.get("id","")))
 	if step_id!=current_id:
 		current_id=step_id
 		_start()
@@ -46,7 +46,7 @@ func _start() -> void:
 
 func _finished() -> void:completed=true
 
-func is_blocking() -> bool:return enabled and not completed
+func has_unfinished_clip() -> bool:return enabled and not completed
 
 func replay() -> void:
 	if not current_id.is_empty():_start()

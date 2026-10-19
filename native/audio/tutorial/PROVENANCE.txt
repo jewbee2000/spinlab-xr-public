@@ -1,6 +1,6 @@
 SpinLab XR tutorial narration provenance
 
-The 15 Ogg Vorbis files are synthetic speech generated locally from the
+The 38 Ogg Vorbis files are synthetic speech generated locally from the
 project-authored English scripts in tools/Generate-TutorialNarration.py.
 Voice: Kokoro v1.0 af_heart, American English female, speed 1.0.
 Project terms for scripts and generated assets: see repository LICENSE.

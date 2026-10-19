@@ -1,8 +1,8 @@
 # Install and test the native Quest 2 APK
 
-These instructions are for the **v0.7.0 standalone Android/OpenXR app** with a physical operating console, lower, angled side analyzer, three-tab menu, floating guide, and controller-driven gloves. The older browser instructions remain in [INSTALL_QUEST2.md](INSTALL_QUEST2.md). After installation, the native app runs on the headset without a local web server, Quest Link, or a tethered gaming PC.
+These instructions are for the **v0.8.0 standalone Android/OpenXR app** with a physical operating console, lower, angled side analyzer, two-tab Tools/Session menu, floating guide, and controller-driven gloves. The older browser instructions remain in [INSTALL_QUEST2.md](INSTALL_QUEST2.md). After installation, the native app runs on the headset without a local web server, Quest Link, or a tethered gaming PC.
 
-Instructions updated 18 October 2026. Meta may change menu names. In v0.5.1, the user confirmed upright lettering and acceptable guide/analyzer appearance, but reported incorrect controller button and joystick positions. Version 0.7.0 replaces those controller graphics and changes the menu/tutorial workflow; these changes need fresh headset feedback. Walking comfort, fingertip contact, report retrieval, and sustained performance require separate observations. Exact build/install evidence belongs in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md). See [UX_DESIGN.md](UX_DESIGN.md) for workspace and movement behavior.
+Instructions updated 18 October 2026. Version 0.8.0 uses Android version code **10**. Meta may change menu names. The operator confirmed that v0.7.0's minimal prompts, speech, and small button markers were substantially better, but reported obscuring dial labels, incomplete beginner coverage, and an empty graph. This revision addresses those issues; the revised lesson, control reach, chart readability, comfort, report retrieval, and sustained performance need their own headset observations. Exact export/install evidence belongs in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md); workspace behavior is in [UX_DESIGN.md](UX_DESIGN.md).
 
 ## 1. Enable developer mode and authorize this computer
 
@@ -49,10 +49,10 @@ The repository includes helpers: `tools/Install-APK.ps1` installs and launches `
 
 ## 3. Install the built APK
 
-The v0.7.0 build output is `artifacts/SpinLabXR-v0.7.0.apk` and its Android package is `us.teitelbaum.spinlabxr`. Build it with `tools/Build-APK.ps1`, or place the matching downloaded release APK at that path. In the same PowerShell window:
+The v0.8.0 build output is `artifacts/SpinLabXR-v0.8.0.apk` and its Android package is `us.teitelbaum.spinlabxr`. Build it with `tools/Build-APK.ps1`, or place the matching downloaded release APK at that path. In the same PowerShell window:
 
 ```powershell
-$spinlabApk = Join-Path (Get-Location) 'artifacts\SpinLabXR-v0.7.0.apk'
+$spinlabApk = Join-Path (Get-Location) 'artifacts\SpinLabXR-v0.8.0.apk'
 Test-Path -LiteralPath $spinlabApk
 & $spinlabAdb install -r $spinlabApk
 ```
@@ -67,28 +67,28 @@ Start seated or standing with a clear boundary and both Touch controllers awake.
 
 The normal workspace has **no open control menu**. Small circular **X/Y** markers sit over the actual left-controller button locations, and **A/B** over the right. They follow the full grip pose, with a fixed outward clearance above the glove; they contain no function cards. Use the physical console caps for operating commands. The lower, angled analyzer sits to the left of the guard.
 
-With startup guidance enabled, a small arrow and action label appear beside the current target. The step description and relevant science are spoken in a bundled offline neural voice. There are no long tutorial paragraphs onscreen. Correct work advances the fifteen stages after the voice finishes and a 1.5-second Done cue. Acquisitions must finish analysis and coast to zero; rejected or partial work does not count. The prompt hides if every nearby placement would intersect hardware or obstruct the target.
+With startup guidance enabled, a small arrow and action label appear beside the current target. The step description and relevant science are spoken in a bundled offline neural voice. There are no long tutorial paragraphs onscreen. The 38-step course explains the activity from first principles and teaches the actual micrometer, mass/angle adjustments, both correction planes, safe stopping, plots, verification, and repeatability. Correct work advances immediately, even during speech. Listen first, then act to hear the full explanation. Acquisitions must finish analysis and coast to zero; rejected or partial work does not count. The prompt hides if every nearby placement would intersect hardware or obstruct the target.
 
-Press **B/Y** to open the three-tab menu. Its Quest controller models and rays replace the gloves while it is open. Meta runtime models are preferred, with pinned Quest 2 Touch assets as fallback. Where the runtime supplies valid controller-derived Capsense poses, translucent hands follow the fingers touching the controls. These poses do not provide optical-hand input. Point and use the index trigger; press B/Y or Close Menu to return to physical operation. Right-stick click replays the current spoken instruction. Session provides **Voice ON/OFF**, **Replay Voice**, **Pause/Resume Floating Guide**, **Restart Floating Guide**, **Skip Current Guide Lesson**, and **Guide at Startup: On/Off**. Pause/resume preserves the current page. Turning startup off changes later launches; completing the guide also turns it off. Instruction navigation does not reset the lab. **Session → New Session** deliberately resets the live laboratory; save reports first. Leave the app through the Quest system menu. [TUTORIAL.md](TUTORIAL.md) describes the balancing work instructions.
+Press **B/Y** to open the two-tab Tools/Session menu. Its Quest controller models and rays replace the gloves while it is open. Meta runtime models are preferred, with pinned Quest 2 Touch assets as fallback. Where the runtime supplies valid controller-derived Capsense poses, translucent hands follow the fingers touching the controls. These poses do not provide optical-hand input. Point and use the index trigger; press B/Y or Close Menu to return to physical operation. Right-stick click replays the current spoken instruction. Session provides **Voice ON/OFF**, **Replay Voice**, **Pause/Resume Floating Guide**, **Restart Floating Guide**, **Skip Current Guide Lesson**, and **Guide at Startup: On/Off**. Pause/resume preserves the current page. Turning startup off changes later launches; completing the guide also turns it off. Instruction navigation does not reset the lab. **Session → New Session** deliberately resets the live laboratory; save reports first. Leave the app through the Quest system menu. [TUTORIAL.md](TUTORIAL.md) describes the balancing work instructions.
 
-| Action | Version 0.7.0 headset control |
+| Action | Version 0.8.0 headset control |
 | --- | --- |
 | Push a physical console button | Reach the visible index tip toward its front face and push through its short travel. Keep the index trigger released to extend the virtual finger. Withdraw before another press. A successful actuation gives one haptic click. |
 | Hold a nearby object/handle | Move the palm close until the `GRIP` hint appears, then squeeze and hold the controller's side grip. Release to let go. |
 | Load the rotor | Grip the tray rotor, carry it upright and centered over the spindle, then release. An unsuitable placement returns it to the tray. |
 | Open/close the guard | Grip the orange handle nearby. Lift the counterbalanced enclosure to open it; lower it fully and release to latch the interlock. |
-| Adjust a dial | Grip the nearby dial and rotate your wrist about its axis. The probe moves 0.5 mm per turn, mass changes 0.5 g per turn, and the angle dial follows the turn directly. Release to finish; nearby physical ± buttons make small increments. Thumbsticks do not turn dials. |
-| Open/close the menu | Press B/Y. Choose highlighted Balance, Analyze, or Session tabs by pointing and triggering. The menu suspends physical button/grip input and shows controller models and rays. Close it before reaching for the fixture. |
-| Work instructions and review | Confirmed actions/completed measurements advance after narration ends and a 1.5-second success cue. Voice mute removes the audio wait. X reviews earlier instructions and pauses automatic progression; A returns forward to the current task or continues a ready task. The separate guide has no touch buttons. Session contains pause/resume, restart, skip lesson, and startup preference. |
+| Adjust a dial | Grip the nearby dial and rotate your wrist about its axis. Use the actual probe drum on the station's right side; there is no duplicate front Probe dial or ± control. The probe moves 0.5 mm per turn, Mass changes 0.5 g per turn, and Angle follows the turn directly. Release/regrip for further turns, and release before pressing HOME or another setup control. Thumbsticks do not turn dials. |
+| Open/close the menu | Press B/Y. Choose the highlighted Tools or Session tab by pointing and triggering. The menu suspends physical button/grip input and shows controller models and rays. Close it before reaching for the fixture. |
+| Work instructions and review | Accepted tasks advance as soon as their real completion conditions hold, independently of speech. Dial grips must be released and captures must finish analysis/coast-down. Listen before acting to hear the full explanation. X reviews earlier instructions and pauses automatic progression; A returns forward to the current task or continues a ready task. The separate guide has no touch buttons. Session contains pause/resume, restart, skip lesson, and startup preference. |
 | Replay or mute narration | Click the right stick to replay. Session → Voice ON/OFF mutes independently of motor sound; Session also has Replay Voice. Menu/focus loss pauses voice in place. |
-| Change chart | Use the physical CHART cap or the Analyze menu's chart control. A/X are reserved for guide navigation. |
+| Change chart | Use the physical CHART cap. Captures automatically show TIME and sweeps show their speed plot; ORDER uses captured-speed-normalized 1×/2× axes. See [ANALYZER.md](ANALYZER.md). A/X are reserved for guide navigation. |
 | Adjust workbench height | Left stick up/down adjusts height. There are no menu height buttons. Withdraw before touching a relocated target. |
 | Walk | Right stick moves along the floor relative to head direction, up to 0.65 m/s with a 0.18 dead zone and bounded work area. Movement is suspended while the menu is open, a mechanism is held, focus is lost, or required head/controller tracking is unavailable. Return the stick to neutral before resuming. |
 | Recenter | Session → Recenter at Workbench restores the workbench starting position and height. Release the sticks and approach targets afresh. |
 
 Loading and guard motion require nearby physical grips; menu rays cannot grab them remotely. Motor sonification starts muted. When tracking quality drops or a system menu interrupts the app, hands/contact are suspended and active holds are cancelled; release the grip and approach again after tracking returns. A fresh fingertip approach is also required after opening/closing menus or relocating the station.
 
-The physical console and nearby mechanisms provide the complete balancing procedure. The tutorial teaches that procedure and its science, without menu-navigation exercises. Follow it, or use this manual single-plane sequence:
+All ordinary operating commands, including HOME, SPEED, CHART, and SAVE REPORT, are on the physical console. Tools contains only sensor/tach fault injection, assembly inspection, and motor sound; Session contains guide/voice, movement, recenter, and reset settings. The physical console and nearby mechanisms provide the complete balancing procedure. The tutorial teaches that procedure and its science, without menu-navigation exercises. Follow it, or use this manual single-plane sequence:
 
 1. Grip the tray rotor, carry it upright to the spindle, and release to seat it. Push **Home Vibration Probe**.
 2. Grip the orange guard handle, lower fully, and release to latch. Push **Record Baseline**; wait for acquisition and coast-down to finish.
@@ -96,7 +96,7 @@ The physical console and nearby mechanisms provide the complete balancing proced
 4. After coast-down, push **Solve**. Open the guard physically and push **Fit Calculated Correction**; this replaces the trial mass with the calculated total correction.
 5. Lower/latch the guard and push **Verify**. Keep the measured baseline, trial, solution, and independent verification results for feedback.
 
-For two-plane mode, acquire a fresh baseline, fit and measure the plane-A trial, switch active plane to B, and fit/measure its independent trial before solving. The trial helper restores the other plane to its baseline masses; records retain the actual installed vectors. The scientific methods retain their documented assumptions and synthetic-data limits.
+For two-plane mode, acquire a fresh baseline, fit and measure the plane-A trial, switch active plane to B, and fit/measure its independent trial before solving. The trial helper restores the other plane to its baseline masses; records retain the actual installed vectors. The scientific methods retain their documented assumptions and synthetic-data limits. If a changed setup or fault invalidates calibration, the active guide directs stopped recovery/HOME as needed and returns to Baseline for new independent trials, preserving historical records.
 
 Check the new interactions as well as the lab sequence:
 
@@ -105,9 +105,9 @@ Check the new interactions as well as the lab sequence:
 3. Grip/carry/release the rotor, lift/latch the guard, and turn each dial. Confirm holding any mechanism inhibits a new acquisition. Check rejection of mass changes or opening the guard while the rotor is moving.
 4. Try running before setup, plus deliberate sensor/tach faults and E-stop recovery. Reset/release must not restart the rotor automatically.
 5. Change menu, move/recenter the station, and briefly interrupt tracking with the headset's system interface. Existing contact must not become a new press; reacquire the target deliberately.
-6. Follow the guide without pressing A: verify one 1.5-second success cue per completed physical task and no progression from rejected actions or partial acquisitions. Then check optional A/X review, unmet-objective hints, Session pause/resume, skip, and restart during existing work. Check startup OFF across relaunch and confirm the guide does not block a mechanism or act as an extra touch panel. Record any truncated text or unclear action.
-7. Save a report and use section 5 to retrieve it. Earlier retrieval did not establish successful export; check this explicitly in v0.7.0 before relying on saved records.
-8. Run for at least five minutes through representative pressing, carrying, dials, guide/menu navigation, walking, and analysis. Observe comfort, frame pacing, and controller responsiveness. The Quest 2 starting target is 72 Hz (about 13.9 ms per frame interval). Earlier short runtime samples and a desktop FPS counter do not establish v0.7.0 sustained performance.
+6. Follow the guide without pressing A: verify immediate progression from completed physical work, interruption of the previous voice, and no progression from rejected actions or partial acquisitions. Then check optional A/X review, unmet-objective hints, Session pause/resume, skip, and restart during existing work. Check startup OFF across relaunch and confirm the guide does not block a mechanism or act as an extra touch panel. Record any truncated text or unclear action.
+7. Save a report and use section 5 to retrieve it. Earlier retrieval did not establish successful export; check this explicitly in v0.8.0 before relying on saved records.
+8. Run for at least five minutes through representative pressing, carrying, dials, guide/menu navigation, walking, and analysis. Observe comfort, frame pacing, and controller responsiveness. The Quest 2 starting target is 72 Hz (about 13.9 ms per frame interval). Earlier short runtime samples and a desktop FPS counter do not establish v0.8.0 sustained performance.
 
 Report what the headset actually does. An APK build, manifest inspection, or numerical unit test does not prove that the physical-controller and rendering checks passed.
 
@@ -148,8 +148,9 @@ From the project root, run `.\tools\Pull-Quest-Reports.ps1` for this signed deve
 | A menu selection does nothing | Aim a controller ray at the visible menu button, then use the index trigger. Release before another selection. Physical gloves return after closing the menu. |
 | Rotor returns to the tray | Release it upright and centered over the spindle with the guard open and spindle stopped. |
 | Guard remains unlatched | Lower the handle fully before releasing it. A partially raised counterbalanced guard remains open. |
-| Thumbstick does not adjust a dial | The native app uses a nearby grip plus wrist rotation; the physical ± buttons offer fine increments. |
-| Guide does not advance | Read the current task/hint and complete its physical action. A measurement must finish analysis and coast to zero, followed by the 1.5-second success dwell. Rejected or interrupted runs do not count. A/X offer optional review; Session can skip a stage or pause guidance. |
+| Thumbstick does not adjust a dial | The native app uses a nearby grip plus wrist rotation. Release and regrip for additional turns; there are no ± buttons. |
+| Guide does not advance | Read the current task/hint and complete its physical action. A measurement must finish analysis and coast to zero; release a held dial/handle. No speech wait or success timer follows. Rejected or interrupted runs do not count. A/X offer optional review; Session can skip a stage or pause guidance. |
+| Graph is empty | Before the first accepted capture, this is an explicit empty-state instruction. Run BASELINE; normal captures select TIME. CHART selects ORDER, and a completed SWEEP supplies speed data. See [ANALYZER.md](ANALYZER.md). |
 | Guide opens on every launch | In Session, turn Guide at Startup OFF. Pause affects the current session; it does not change the startup preference. |
 | Right stick does not walk | Close the menu, release held mechanisms, restore tracked head/controllers and app focus, then return the stick to neutral before trying again. Check Session → Joystick Walking is ON. |
 | Left stick does not change height | Release held mechanisms, close the menu, restore tracking/focus, and return the stick to neutral before retrying. |

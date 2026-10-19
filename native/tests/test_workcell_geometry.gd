@@ -34,8 +34,8 @@ func _run() -> void:
 
 
 func _test_console(geometry) -> void:
-	_check(geometry.physical_buttons.size()==18,"Physical registry includes existing HOME and seventeen console controls")
-	_check(geometry.physical_buttons.has(geometry.probe_home_button),"Existing probe HOME remains registered")
+	_check(geometry.physical_buttons.size()==18,"Physical registry includes eighteen unique console commands")
+	_check(geometry.physical_buttons.has(geometry.probe_home_button),"Canonical HOME is registered without a duplicate stage cap")
 	var commands: Dictionary={}
 	var font: Font=ThemeDB.fallback_font
 	for button in geometry.physical_buttons:
@@ -57,7 +57,7 @@ func _test_console(geometry) -> void:
 			_check(normal.y>0.5 and normal.z>0.5,"Console face approaches forward/up along its true local normal")
 			for corner in [Vector3(-button.width_m/2,-button.height_m/2,0),Vector3(button.width_m/2,button.height_m/2,0)]:
 				_check(button.to_global(corner).y<0.86,"Front console leaves the table and fixture accessible above it")
-	for command in ["home","baseline","stop","estop","recover","fit_trial","trial_a","trial_b","solve","apply","verify","repeat","sweep","plane","mode","chart","save"]:
+	for command in ["home","baseline","stop","estop","recover","fit_trial","trial_a","trial_b","solve","apply","verify","repeat","sweep","plane","mode","chart","save","speed"]:
 		_check(commands.has(command),"Normal operating console includes "+command)
 	var console: Array=[]
 	for button in geometry.physical_buttons:

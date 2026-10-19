@@ -141,7 +141,7 @@ func _fresh() -> void:
 	app.head_tracking_override = null
 	app.walk_distance_m = 0.0
 	app.height_changed = false
-	app.tab = "balance"
+	app.tab = "session"
 	app.tutorial.skip()
 	app.guide_paused = false
 	for entry in [left, right]:
@@ -169,7 +169,7 @@ func _test_start_and_menu() -> void:
 	_check(not app.menu_open and not app.controls.visible, "Station starts with its menu hidden")
 	for button in app.buttons:
 		if button.get_meta("ui", false):_check(not button.enabled and button.collision_layer == 0, "Hidden menu leaves no active collider")
-	_check(app.menu_tab_buttons.size() == 3 and not app.menu_tab_buttons.has("operate") and not app.menu_tab_buttons.has("learn"), "Menu omits redundant Operate tab and keeps three categories plus separate instructions")
+	_check(app.menu_tab_buttons.size() == 2 and not app.menu_tab_buttons.has("operate") and not app.menu_tab_buttons.has("learn"), "Menu has only Tools and Session; all operations live on the physical station")
 	app.tutorial.start(app._tutorial_context())
 	app._refresh_tutorial()
 	_check(app.tutorial_panel.visible and not app.controls.is_ancestor_of(app.tutorial_panel), "Guide remains independent of the hidden application menu")
@@ -179,7 +179,7 @@ func _test_start_and_menu() -> void:
 	_check(right.controller_visual.visible and not right.hand.visible, "Open menu replaces gloves with controller representations")
 	app._controller_released("by_button", right)
 	_check(app.menu_open, "B release cannot toggle the menu a second time")
-	for key in ["balance", "diagnostic", "session"]:
+	for key in ["diagnostic", "session"]:
 		app._action("tab:" + key)
 		var selected: int = 0
 		for tab_key in app.menu_tab_buttons:
@@ -201,7 +201,7 @@ func _test_pointer_rearming() -> void:
 	right.ray.target = app.menu_tab_buttons.diagnostic
 	app._update_controllers(DT)
 	app._controller_pressed("trigger_click", right)
-	_check(app.tab == "balance" and not right.trigger_armed, "Opening menu with trigger held cannot select")
+	_check(app.tab == "session" and not right.trigger_armed, "Opening menu with trigger held cannot select")
 	right.node.trigger = 0.0
 	app._update_controllers(DT)
 	_check(right.trigger_armed and right.aim_tracked, "Tracked neutral trigger rearms menu selection")
@@ -248,7 +248,7 @@ func _test_pointer_rearming() -> void:
 	app._update_controllers(DT)
 	right.ray.target = app.menu_tab_buttons.session
 	app._controller_pressed("trigger_click", right)
-	_check(not app.menu_open and app.tab == "balance", "Trigger has no distant UI behavior with menu closed")
+	_check(not app.menu_open and app.tab == "session", "Trigger has no distant UI behavior with menu closed")
 
 func _test_collision_layers() -> void:
 	_fresh()
@@ -290,15 +290,15 @@ func _test_pointer_outcome_boundary() -> void:
 	app._set_menu_open(true)
 	app._action("tab:session")
 	app.simulate_save_failure = true
-	_pointer_select(_ui_button("save"))
+	app._physical_action("save","fingertip")
 	_check(app.status.contains("injected I/O failure"), "Failed-save injection follows the actual menu pointer/command route")
 	_check(not app.tutorial.view(app._tutorial_context()).ready, "Failed pointer save cannot satisfy the report objective")
 	_check(app.saved_path.is_empty(), "Failed-save command does not invent a saved file reference")
 	app.simulate_save_failure = false
-	app._action("tab:balance")
-	_pointer_select(_ui_button("apply"))
-	_check(app.model.solution.is_empty(), "Pointer Apply is rejected without a measured solution")
-	_check(not app.tutorial.view(app._tutorial_context()).ready, "Rejected pointer Apply cannot create an accepted application checkpoint")
+	app._set_menu_open(false)
+	app._physical_action("apply","fingertip")
+	_check(app.model.solution.is_empty(),"Physical Apply is rejected without a measured solution")
+	_check(not app.tutorial.view(app._tutorial_context()).ready,"Rejected Apply cannot create accepted work evidence")
 
 func _pointer_select(button) -> void:
 	right.ray.target = button
@@ -608,7 +608,7 @@ func _test_callout_after_controller_poll() -> void:
 	for command in ["mount","home","guard"]:app._action(command)
 	app.geometry.update_state(app.model.telemetry())
 	app.tutorial.start(app._tutorial_context())
-	app.tutorial.skip_step();app.tutorial.skip_step()
+	while app.tutorial.steps[app.tutorial.index].id!="open_setup":app.tutorial.skip_step()
 	app._refresh_tutorial()
 	var target: Node3D=app.geometry.guard_handle
 	right.grip_node.global_position+=target.global_position-right.hand.palm_global()

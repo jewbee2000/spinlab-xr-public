@@ -79,7 +79,7 @@ func _sync_ui() -> void:
 
 func _test_world_controls() -> void:
 	app._set_menu_open(true)
-	for menu in ["balance", "diagnostic", "session"]:
+	for menu in ["diagnostic", "session"]:
 		_tab(menu)
 		var menu_count := 0
 		for button in app.buttons:
@@ -91,7 +91,7 @@ func _test_world_controls() -> void:
 			_check(is_instance_valid(button.face) and is_instance_valid(button.text_label), "World button has a visible face and caption")
 			if button.get_meta("menu", false):
 				menu_count += 1
-		_check(menu_count == (10 if menu=="session" else 8), "Eight primary commands plus Session voice controls in " + menu)
+		_check(menu_count == (9 if menu=="session" else 4), "Only unique tool/session commands in " + menu)
 	var physical_actions: Dictionary = {}
 	var grabbable := false
 	for body in app.geometry.find_children("*", "StaticBody3D", true, false):
@@ -156,7 +156,7 @@ func _acquire(command: String) -> bool:
 
 func _guard(closed: bool) -> void:
 	if app.model.guard_closed != closed:
-		_tab("balance")
+		_tab("session")
 		app._action("guard")
 	_check(app.model.guard_closed == closed, "Guard is " + ("closed" if closed else "open"))
 
@@ -174,15 +174,15 @@ func _test_balance_workflow(two_plane: bool) -> void:
 	app.model.async_processing = false
 	_check(not app.model.mounted and app.model.records.is_empty(), "Session reset clears fixture and records")
 	if two_plane:
-		_tab("balance")
+		_tab("session")
 		_click("mode")
 	_check(app.model.mode == ("two_plane" if two_plane else "single"), "Requested balancing method selected")
-	_tab("balance")
+	_tab("session")
 	app._action("mount")
 	_click("home")
 	_check(app.model.mounted and app.model.homed, "Load and home commands prepare fixture")
 	_guard(true)
-	_tab("balance")
+	_tab("session")
 	if not _acquire("baseline"):
 		return
 	_check(not app.model.baseline.is_empty(), "Baseline is available to calibration")
@@ -201,36 +201,35 @@ func _test_balance_workflow(two_plane: bool) -> void:
 	if not _acquire("sweep"):
 		return
 	_check(app.model.sweep_points.size() >= 15, "Resonance sweep has multiple acquired speed points")
-	_click("chart")
 	_check_chart("sweep")
 	_guard(false)
-	_tab("balance")
+	_tab("session")
 	_click("fit_trial")
-	_check(is_equal_approx(float(app.model.masses[0]), 0.25), "Known plane A trial installed from menu")
+	_check(is_equal_approx(float(app.model.masses[0]), 0.25), "Known plane A trial installed from physical cap")
 	_guard(true)
-	_tab("balance")
+	_tab("session")
 	if not _acquire("trial_a"):
 		return
 	if two_plane:
 		_guard(false)
-		_tab("balance")
+		_tab("session")
 		_click("plane")
 		_check(app.active_plane == 1, "Plane selector chooses B")
 		_click("fit_trial")
 		_check(is_zero_approx(float(app.model.masses[0])) and is_equal_approx(float(app.model.masses[1]), 0.25), "Plane B helper restores independent trial configuration")
 		_guard(true)
-		_tab("balance")
+		_tab("session")
 		if not _acquire("trial_b"):
 			return
 	_click("solve")
 	_check(not app.model.solution.is_empty(), "Influence-coefficient solution reaches instrument")
 	_check(app.readouts.solution.text.contains("condition"), "Solution readout reports matrix condition")
 	_guard(false)
-	_tab("balance")
+	_tab("session")
 	_click("apply")
 	_check(float(app.model.masses[0]) > 0.0, "Calculated total correction is installed")
 	_guard(true)
-	_tab("balance")
+	_tab("session")
 	if not _acquire("verify"):
 		return
 	_check(app.model.latest.get("verified", false), "Corrected rotor passes numerical verification")
@@ -240,14 +239,14 @@ func _test_balance_workflow(two_plane: bool) -> void:
 	# A mass edit must invalidate a green result even though it does not erase
 	# the historical verification record in the session report.
 	_guard(false)
-	_click("nudge:mass:1")
+	app._set_dial("mass",float(app.model.masses[app.active_plane])+0.025)
 	_sync_ui()
 	_check(not app.model.latest.get("verified", false), "Correction edit invalidates verified model status")
 	_check(not app.readouts.result.text.begins_with("VERIFIED"), "Correction edit clears visible VERIFIED status")
-	_tab("balance")
+	_tab("session")
 	_click("apply")
 	_guard(true)
-	_tab("balance")
+	_tab("session")
 	if not _acquire("repeat"):
 		return
 	var stats: Dictionary = app.model.latest.get("repeatability", {})
@@ -285,7 +284,7 @@ func _capture_verified_state() -> void:
 	if DisplayServer.get_name() == "headless":
 		print("APP_CAPTURE_SKIPPED: headless rendering has no viewport pixels")
 		return
-	_tab("balance")
+	_tab("session")
 	app.chart_kind = "time"
 	_sync_ui()
 	for frame in range(4):

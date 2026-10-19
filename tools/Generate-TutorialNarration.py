@@ -27,53 +27,199 @@ ASSETS = {
 }
 # Explicit spoken scripts avoid pronunciation of mathematical glyphs, units,
 # abbreviations and formatting intended for a visual display.
-SCRIPTS = [
-    ("load", "Seat the rotor upright", 
-     "Grip the rotor in the tray, carry it upright over the spindle, and release to seat it. If it is already seated, leave it in place.",
-     "Unbalance is mass times radius. Its rotating force grows with the square of speed. We will measure that response, calculate a correction, and test it."),
-    ("home", "Reference the vibration probe",
-     "With the rotor loaded and stopped, press the physical Home button. Confirm the probe reads six millimeters. Press Home now, even if an earlier reference is displayed.",
-     "A repeatable sensor position makes the calibration meaningful. Homing or changing probe position, speed, or mode discards the previous calibration."),
-    ("guard", "Latch the enclosure",
-     "Grip the orange handle, lower the guard fully, then release. Check that the interlock says closed, and let go of every fixture handle.",
-     "The interlock inhibits starting until the guard is closed and the controls are released. This does not certify real machinery containment."),
-    ("baseline", "Measure the baseline",
-     "Press Baseline on the station. Keep the guard closed, and wait for capture, analysis, and coast-down to zero. Stop aborts an incomplete capture.",
-     "This is the reference vibration before the trial mass. Displacement is in micrometers peak. For a sine wave, divide peak by the square root of two to get root mean square amplitude."),
-    ("open_trial", "Open for the known trial",
-     "Once the spindle reads zero, grip the orange handle and lift the guard. Leave the baseline setup unchanged until the known trial is installed.",
-     "Baseline and trial must use the same speed, correction radius, and sensor setup. Otherwise their difference would mix the trial effect with a changed measurement system."),
-    ("trial_fit", "Install the known trial",
-     "With the guard open and plane A selected, press Fit Trial on the station. The helper adds a known quarter-gram trial relative to the baseline.",
-     "This known change reveals how unbalance affects vibration. Keeping the other plane at its baseline makes the calibration change independent."),
-    ("close_trial", "Latch for Trial A",
-     "Lower the orange guard handle fully, release your grip, and check closed. Keep the trial mass installed for the next measurement.",
-     "Closing the guard prepares the apparatus; it does not measure anything. The trial capture must observe the known mass at exactly the baseline setup and speed."),
-    ("trial_measure", "Measure Trial A",
-     "Press Measure Trial A on the station. Wait for the new capture, analysis, and coast-down to zero. An old trial result cannot replace this measurement.",
-     "Subtracting the baseline response isolates the known trial's effect. Tachometer-referenced analysis separates the once-per-revolution response from offset and second-harmonic motion."),
-    ("solve", "Calculate the correction",
-     "At zero speed, press Solve. Read the calculated correction mass, angle, and condition information on the analyzer. Rejected trial data must be measured again.",
-     "The influence coefficient, alpha, is the response change divided by trial unbalance. Correction is minus the baseline response divided by alpha. This accounts for support phase, rather than guessing the heavy spot."),
-    ("open_apply", "Open for correction",
-     "At zero speed, lift the orange guard handle. Keep the calculated solution available. Do not change probe geometry or test speed.",
-     "The correction depends on the calibrated response of the apparatus. Changing the sensor or support can invalidate that sensitivity, even if a displayed mass still looks plausible."),
-    ("apply", "Install the calculated correction",
-     "With the guard open, press Apply Correction on the station. The helper removes the trial configuration and installs the total calculated masses.",
-     "The correction is added to the baseline mass vector, not to the temporary trial mass. This is still a prediction; a new measurement must test it."),
-    ("close_verify", "Latch for verification",
-     "Lower the guard fully and release the handle. Keep the calculated correction installed, and confirm closed before measuring.",
-     "Single-plane correction targets sensor A at one speed. Sensor B can still show vibration. Only a fresh measurement can tell us whether the installed correction works."),
-    ("verify", "Verify with a fresh measurement",
-     "Press Verify on the station. Wait through analysis and coast-down to zero, then inspect the measured reduction. A low reduction is a result to diagnose and retry.",
-     "Fresh verification tests the installed correction. Old results or changed settings do not count. Near zero amplitude, phase becomes unobservable, rather than a useful correction direction."),
-    ("repeat", "Check repeatability",
-     "Press Repeat with the setup unchanged. Wait for all three measurement windows and coast-down. Read the mean amplitude, standard deviation, and Type A standard error.",
-     "Standard deviation describes scatter. Dividing it by the square root of three gives the standard error of the mean. These simulated repeats do not measure calibration bias or total uncertainty."),
-    ("report", "Save the evidence",
-     "Press Save Report on the station and confirm the saved path. The guide finishes after the success message, while your laboratory data stay available.",
-     "The report links settings, accepted measurements, calculations, events, and limits. Keep it as evidence of this synthetic exercise. Guide completion can include skips; it does not certify competence or equipment safety."),
-]
+SCRIPTS = [('load',
+  'Meet the rotor',
+  'Welcome to the wheel lab. Your mission is to make a spacecraft rotor shake less. A tiny off-center mass '
+  'pulls outward each turn, causing vibration.',
+  "We'll measure it, add known test masses, then cancel the shake. Grip the tray rotor and seat it upright on "
+  'the spindle.'),
+ ('home',
+  'Reference the probe',
+  "Press Home on the station to set the probe's reference position at six millimeters.",
+  'This sensor measures tiny vibration without touching the rotor. Before comparing measurements, we need a '
+  'repeatable distance between sensor and target.'),
+ ('probe_adjust',
+  'Try the micrometer',
+  "Use the right stick to reach the station's right side. Grip the micrometer drum, turn to change its reading "
+  'by a tenth of a millimeter, then release.',
+  'Regrip as needed. One revolution moves half a millimeter.'),
+ ('probe_restore',
+  'Restore the reference',
+  "Release the micrometer before pressing Home to restore six millimeters. We'll keep that probe position "
+  'fixed.',
+  'Sensor motion changes sensitivity and discards calibration. Comparing vibration requires the same '
+  'measurement setup, so rehome before starting our experiment.'),
+ ('open_setup',
+  'Open for the dial experiment',
+  "At zero speed, lift the orange guard if it is closed. We'll adjust rotor weights next.",
+  'Mass changes require open access and a stopped rotor. Closing the enclosure instead prepares the station '
+  'for spinning.'),
+ ('mass_practice',
+  'Try the mass dial',
+  'With the rotor stopped and the guard open, grip the Mass dial. Twist to add at least five hundredths of a '
+  'gram, then release.',
+  'This changes the size of the correction weight on the selected plane.'),
+ ('angle_practice',
+  'Aim the correction weight',
+  'Grip the Angle dial and turn the nonzero weight at least twenty degrees, then release.',
+  'Mass sets how much correction you add; angle sets where around the rotor it acts. Those two values describe '
+  'a correction vector.'),
+ ('clear_mass',
+  'Restore the bare rotor',
+  'Grip Mass and twist back to zero grams, then release. Let go and regrip for extra turns if needed. Leave '
+  'Angle unchanged.',
+  'With no weight installed, angle creates no force. Our experiment starts with the bare rotor.'),
+ ('mode_two',
+  'Choose two-plane balancing',
+  'Press Mode to select two-plane balancing.',
+  'A thin disc can often use one correction plane. Our wheel has two separated planes: their weights can '
+  "cancel both an off-center pull and a rocking effect. We'll measure both sensors."),
+ ('plane_b',
+  'Find plane B',
+  'Press Plane to select B. Watch which rotor plane is selected.',
+  'The Mass and Angle dials edit only the selected plane. Both planes influence both sensors, so changing B '
+  'can affect motion measured near A, too.'),
+ ('plane_a',
+  'Return to plane A',
+  "Press Plane again to return to A. We'll use A for our first known test mass.",
+  "Selecting a plane changes which weight you're editing. It does not add a weight or take a vibration "
+  'measurement.'),
+ ('speed_explore',
+  'Explore test speed',
+  'Press Speed to try another test-speed setting. The rotor stays stopped while you choose.',
+  'A faster rotor produces more force from the same off-center mass. Its support can amplify certain speeds, '
+  'so consistent test conditions matter.'),
+ ('speed_restore',
+  'Set the working speed',
+  'Press Speed until the display reads twelve hundred revolutions per minute. The settings cycle through '
+  'fifteen hundred, nine hundred, and twelve hundred.',
+  'Keep this working speed for baseline, both trials, and verification to compare their responses.'),
+ ('guard',
+  'Close the guard',
+  'Grip the orange handle, lower the guard fully, then release it. Check that the station says closed.',
+  'The enclosure interlock prevents starting with an open guard. Release the guard, rotor, and dials before '
+  'any spin.'),
+ ('preview_start',
+  'Start a practice spin',
+  'Press Sweep to begin a practice spin. Watch the rotor accelerate and the live vibration appear on the '
+  'monitor.',
+  "This first spin is only for learning the stopping controls. We'll collect our real measurements afterward."),
+ ('stop',
+  'Stop the practice spin',
+  'Press Stop and watch the rotor coast to zero. Keep the guard closed until it stops.',
+  'Stop cancels an unfinished capture. Partly collected data cannot become a trusted calibration point, even '
+  'when the rotor looked steady.'),
+ ('estop',
+  'Try the emergency latch',
+  'With the rotor stopped, press the red E-stop. Notice that the emergency state latches.',
+  "Unlike a routine stop, this also discards calibration. We're practicing at zero speed before collecting "
+  'data, so no balancing result is lost.'),
+ ('recover',
+  'Recover deliberately',
+  'Press Recover at zero speed to release the latch or clear a fault. Another condition may need another '
+  'press. The rotor stays stopped.',
+  'Recovery removes the probe reference. Rehome and collect fresh calibration before balancing again.'),
+ ('rehome',
+  'Reference after recovery',
+  'Press Home to reference the probe again at six millimeters. Confirm the station is ready with its guard '
+  'closed.',
+  'Recovery is a deliberate sequence: clear the latch, restore the reference, then request a new run.'),
+ ('baseline',
+  'Measure the starting shake',
+  'Press Baseline and watch the time trace. Keep the guard closed through capture, analysis, and coast-down.',
+  'Baseline records the starting shake in micrometers peak. Any changed measurement setup needs a fresh '
+  'baseline.'),
+ ('chart_order',
+  'See the rotation signature',
+  'Press Chart to view the order spectrum. Find the markers at one and two.',
+  'One means once per revolution; two means twice. Taller peaks mean larger vibration. Our balancing '
+  'calculation targets the once-per-turn response.'),
+ ('open_trial',
+  'Prepare a known change',
+  'At zero speed, lift the orange guard handle.',
+  'The baseline tells us how much the station shakes, but not which weight will fix it. A known test mass will '
+  'reveal how the real measured response changes.'),
+ ('trial_fit',
+  'Add the A test mass',
+  'With plane A selected, press Fit Trial. This adds a known quarter-gram test mass relative to the baseline.',
+  'The helper preserves the original configuration on the other plane. Changing one plane at a time keeps its '
+  'effect identifiable.'),
+ ('close_trial',
+  'Close for the A trial',
+  'Lower the guard fully and release the handle. Keep the A test mass installed.',
+  'Our next run uses the same speed and probe position as baseline. Only the known mass change should explain '
+  'the new measured response.'),
+ ('trial_measure',
+  'Measure the A response',
+  'Press Measure Trial A and wait for capture, analysis, and coast-down to zero.',
+  'The difference from baseline shows how a known A-plane mass affects both sensors. Vibration phase describes '
+  'timing relative to rotation, not simply the heavy spot.'),
+ ('open_trial_b',
+  'Prepare the second trial',
+  "At zero speed, lift the guard again. We'll test the other correction plane.",
+  'One trial cannot describe both planes independently. Our second known change supplies the missing '
+  'relationship between the B-plane mass and the two sensors.'),
+ ('plane_b_trial',
+  'Select B for its trial',
+  'Press Plane to select B before fitting the second test mass.',
+  'We will compare this trial with the original baseline, not with Trial A. Independent tests let the solver '
+  "separate the two planes' effects."),
+ ('trial_fit_b',
+  'Add the B test mass',
+  'Press Fit Trial with B selected. It adds the known quarter-gram test mass on B and restores A to its '
+  'baseline weight.',
+  'Removing the temporary A trial prevents two simultaneous changes from confusing the calibration.'),
+ ('close_trial_b',
+  'Close for the B trial',
+  'Lower the guard fully and release the handle, keeping the B trial installed.',
+  'The two tests must use the same speed, sensor positions, and baseline. Repeatable setup lets us attribute '
+  'their differences to the known mass changes.'),
+ ('trial_measure_b',
+  'Measure the B response',
+  'Press Measure Trial B and wait for capture, analysis, and coast-down to zero.',
+  'Now each known trial has measured responses at both sensors. Together they describe the cross effects '
+  'needed to predict two correction weights.'),
+ ('solve',
+  'Predict the correction',
+  'Press Solve. Read the predicted mass and angle for each correction plane on the monitor.',
+  'The solver combines both measured trial effects to cancel baseline vibration. Poor conditioning means small '
+  'measurement errors could greatly change that prediction.'),
+ ('open_apply',
+  'Open for the correction',
+  'At zero speed, lift the guard. Keep the calculated solution available.',
+  "We'll replace the temporary trial with the predicted correction. Leave probe position and speed unchanged: "
+  'changing the measurement response would invalidate what we just learned.'),
+ ('apply',
+  'Install the prediction',
+  'Press Apply Correction with the guard open. Watch both plane weights update to calculated total values.',
+  'The helper replaces test masses and includes baseline weights correctly. This is a prediction; a fresh '
+  'measurement must test it.'),
+ ('close_verify',
+  'Close for the speed checks',
+  'Lower the guard fully and release the handle. Keep the calculated weights installed.',
+  "We'll explore their response across speeds, then return to our working speed for verification. That final "
+  'matched-speed measurement tests the prediction fairly.'),
+ ('sweep',
+  'Explore the speed response',
+  'Press Sweep and watch the speed-response plot build. Wait for the full sweep and coast-down.',
+  "A balanced wheel can still excite support resonance. Next we'll return to twelve hundred revolutions per "
+  'minute to verify the correction.'),
+ ('verify',
+  'Measure the improvement',
+  'Press Verify and wait through capture, analysis, and coast-down. Compare the new vibration and reported '
+  'reduction with baseline.',
+  'A fresh measurement tests the prediction. If reduction is poor, investigate the setup and data rather than '
+  'declaring success.'),
+ ('repeat',
+  'Check the scatter',
+  'Press Repeat without changing the setup. Wait for three measurement windows and coast-down.',
+  'Compare their mean and scatter on the monitor. Repeats show consistency, but cannot reveal shared '
+  'calibration error. Near zero vibration, phase becomes unreliable.'),
+ ('report',
+  'Keep the evidence',
+  'Press Save Report to preserve your settings, measurements, correction, and diagnostic sweep.',
+  "You've measured a problem, tested known changes, predicted a fix, and checked it. The saved report keeps "
+  'the evidence so someone else can follow your reasoning.')]
 
 
 def sha256(path: Path) -> str:
@@ -119,10 +265,18 @@ def verify_manifest(output: Path) -> None:
     manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
     if list(manifest["clips"]) != [item[0] for item in SCRIPTS]:
         raise RuntimeError("Manifest step coverage/order does not match source scripts.")
+    scripts_by_id = {row[0]: row for row in SCRIPTS}
     for step_id, row in manifest["clips"].items():
+        _, title, instruction, science = scripts_by_id[step_id]
+        expected_transcript = {"title": title, "instruction": instruction, "science": science,
+                               "text": instruction + " " + science}
+        if any(row.get(key) != value for key, value in expected_transcript.items()):
+            raise RuntimeError(f"Stale narration transcript for {step_id}; regenerate that clip.")
         path = output / Path(row["path"]).name
         if sha256(path) != row["sha256"]:
             raise RuntimeError(f"Clip hash mismatch: {step_id}")
+        if path.stat().st_size != row["bytes"]:
+            raise RuntimeError(f"Clip byte-size mismatch: {step_id}")
         samples, rate = sf.read(path)
         if rate != 24000 or samples.ndim != 1 or len(samples) < rate or not np.isfinite(samples).all():
             raise RuntimeError(f"Invalid mono 24 kHz audio: {step_id}")
@@ -130,6 +284,10 @@ def verify_manifest(output: Path) -> None:
             raise RuntimeError(f"Clip duration mismatch: {step_id}")
         if np.max(np.abs(samples)) > 0.995 or np.sqrt(np.mean(samples ** 2)) < 0.005:
             raise RuntimeError(f"Clipped or effectively silent audio: {step_id}")
+    if abs(sum(row["duration_s"] for row in manifest["clips"].values()) - manifest["total_duration_s"]) > 0.01:
+        raise RuntimeError("Manifest total duration does not equal the decoded clip durations.")
+    if sum(row["bytes"] for row in manifest["clips"].values()) != manifest["total_bytes"]:
+        raise RuntimeError("Manifest total bytes does not equal its clip sizes.")
     print(f"Verified {len(manifest['clips'])} clips, {manifest['total_duration_s']:.2f} seconds.")
 
 

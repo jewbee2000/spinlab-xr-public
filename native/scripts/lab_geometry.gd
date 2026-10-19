@@ -23,6 +23,7 @@ var _guard_closed := false
 var _assembly: Node3D
 var _lower_plane: Node3D
 var _upper_plane: Node3D
+var _micrometer_drum: Node3D
 var _probe_carriage: Node3D
 var _status_light: MeshInstance3D
 var _phase_light: MeshInstance3D
@@ -48,6 +49,8 @@ func _ready() -> void:
 	_build_probe()
 	_build_tray()
 	_build_operating_console()
+	# Compatibility reference points to the sole HOME cap, not another button.
+	probe_home_button=physical_by_action.home
 	monitor_mount=Node3D.new()
 	monitor_mount.name="AnalyzerMonitorMount"
 	monitor_mount.position=Vector3(-1.55,1.45,-1.20)
@@ -272,27 +275,25 @@ func _build_probe() -> void:
 	screw.rotation.z = PI / 2
 	var barrel := _cylinder(probe, "MicrometerBarrel", 0.021, 0.10, Vector3(0.19, 0.07, 0), "aluminum")
 	barrel.rotation.z = PI / 2
-	var thimble := _cylinder(probe, "KnurledMicrometer", 0.028, 0.065, Vector3(0.27, 0.07, 0), "navy")
+	_micrometer_drum=Node3D.new();_micrometer_drum.name="MicrometerDrum";probe.add_child(_micrometer_drum);_micrometer_drum.position=Vector3(0.27,0.07,0)
+	var thimble := _cylinder(_micrometer_drum, "KnurledMicrometer", 0.028, 0.065, Vector3.ZERO, "navy")
 	thimble.rotation.z = PI / 2
 	var knurl_transforms: Array[Transform3D] = []
 	for i in range(16):
 		var angle := i * TAU / 16.0
-		knurl_transforms.append(Transform3D(Basis(Vector3.RIGHT, angle), Vector3(0.27, 0.07 + sin(angle) * 0.028, cos(angle) * 0.028)))
-	_batch(probe, "MicrometerGripRibs", _box_mesh(Vector3(0.055, 0.004, 0.004)), "steel", knurl_transforms)
+		knurl_transforms.append(Transform3D(Basis(Vector3.RIGHT, angle), Vector3(0, sin(angle) * 0.028, cos(angle) * 0.028)))
+	_batch(_micrometer_drum, "MicrometerGripRibs", _box_mesh(Vector3(0.055, 0.004, 0.004)), "steel", knurl_transforms)
+	var graduations: Array[Transform3D] = []
+	for i in range(50):
+		var angle := i * TAU / 50.0
+		graduations.append(Transform3D(Basis(Vector3.RIGHT, angle),Vector3(-0.019, sin(angle)*0.029,cos(angle)*0.029)))
+	_batch(_micrometer_drum,"MicrometerGraduations",_box_mesh(Vector3(0.012,0.0013,0.0013)),"white",graduations)
 	probe_grab = _action(probe, "MicrometerGrabInteraction", "dial:probe", Vector3(0.090, 0.080, 0.080), Vector3(0.27, 0.07, 0))
 	probe_grab.set_meta("grab_kind", "dial")
 	probe_grab.set_meta("dial", "probe")
 	probe_grab.set_meta("dial_axis", Vector3.RIGHT)
-	probe_home_button = preload("res://scripts/lab_button.gd").new()
-	probe.add_child(probe_home_button)
-	probe_home_button.position = Vector3(0.025, 0.065, 0.14)
-	probe_home_button.configure("HOME", "home", 0.085, 0.042, Color("285b4c"))
-	probe_home_button.text_label.font_size=24
-	probe_home_button.text_label.pixel_size=0.00070
-	probe_home_button.set_meta("physical",true)
-	physical_buttons.append(probe_home_button)
-	_label(probe, "PROBE  /  HOME", Vector3(0, 0.002, 0.155), 0.0003, "white")
-	_label(probe, "10 µm / DIV", Vector3(0.21, 0.12, 0.06), 0.00025, "muted")
+	_label(probe, "MICROMETER", Vector3(0, 0.002, 0.155), 0.0003, "white")
+	_label(probe, "0.5 mm / TURN", Vector3(0.21, 0.12, 0.06), 0.00025, "muted")
 	# Cable is a deliberately simplified routed harness, without costly physics.
 	_box(probe, "SensorCableVertical", Vector3(0.013, 0.22, 0.013), Vector3(0.065, 0.13, -0.055), "black")
 	_box(probe, "SensorCableRoute", Vector3(0.09, 0.013, 0.013), Vector3(0.11, 0.027, -0.055), "black")
@@ -353,7 +354,7 @@ func _build_operating_console() -> void:
 	var halo=_torus(operating_console,"EmergencyStopBackingRing",0.056,0.066,Vector3(-0.711,0.002,0.046),"amber")
 	halo.rotation.x=PI/2
 	_label(operating_console,"LATCH / RESET",Vector3(-0.711,-0.101,0.043),0.00034,"white")
-	var run := [["HOME","home"],["BASELINE","baseline"],["STOP","stop"],["RESET /\nRELEASE","recover"]]
+	var run := [["HOME","home"],["BASELINE","baseline"],["STOP","stop"],["RECOVER","recover"]]
 	for i in range(run.size()):
 		var pos=Vector3(-0.500+(i%2)*0.190,0.053-(i/2)*0.106,0.054)
 		_console_button(run[i][0],run[i][1],pos,0.170,0.072,Color("285b4c") if i==1 else Color("244353"))
@@ -361,10 +362,10 @@ func _build_operating_console() -> void:
 	for i in range(balance.size()):
 		var pos=Vector3(-0.110+(i%3)*0.195,0.053-(i/3)*0.106,0.054)
 		_console_button(balance[i][0],balance[i][1],pos,0.170,0.072,Color("285b4c") if i in [3,5] else Color("244353"))
-	var analysis := [["REPEAT","repeat"],["SWEEP","sweep"],["PLANE A/B","plane"],["MODE","mode"],["CHART","chart"],["SAVE REPORT","save"]]
+	var analysis := [["CHART","chart"],["SWEEP","sweep"],["REPEAT","repeat"],["SPEED","speed"],["PLANE A/B","plane"],["MODE","mode"],["SAVE REPORT","save"]]
 	for i in range(analysis.size()):
-		var pos=Vector3(0.505+(i%2)*0.185,0.075-(i/2)*0.075,0.054)
-		_console_button(analysis[i][0],analysis[i][1],pos,0.160,0.054,Color("244353"))
+		var pos=Vector3(0.505+(i%2)*0.185,0.09-(i/2)*0.060,0.054)
+		_console_button(analysis[i][0],analysis[i][1],pos,0.160,0.046,Color("244353"))
 
 
 func _console_button(caption: String, command: String, pos: Vector3, width: float, height: float, color: Color):
@@ -373,8 +374,8 @@ func _console_button(caption: String, command: String, pos: Vector3, width: floa
 	operating_console.add_child(button)
 	button.position=pos
 	button.configure(caption,command,width,height,color)
-	button.text_label.font_size=25 if height>0.06 else 23
-	button.text_label.pixel_size=0.00068
+	button.text_label.font_size=25 if height>0.06 else 21
+	button.text_label.pixel_size=0.00068 if height>0.05 else 0.00062
 	button.set_meta("physical",true)
 	button.set_meta("console",true)
 	physical_buttons.append(button)
@@ -403,6 +404,7 @@ func update_state(t: Dictionary) -> void:
 	_upper_plane.visible = two_plane or _exploded
 	_upper_plane.position.y = -0.15 if _exploded else -0.1
 	_lower_plane.position.y = 0.05 if _exploded else 0.0
+	_micrometer_drum.rotation.x=float(t.get("sensor_position_mm",6.0))/0.5*TAU
 	_probe_carriage.position.x = clampf((float(t.get("sensor_position_mm", 6.0)) - 6.0) / 6.0, -1.0, 1.0) * 0.072
 	_status_light.material_override = _materials["green" if mounted and guard_closed else "orange"]
 	_phase_light.visible = mounted and (rpm < 5.0 or fmod(seconds * rpm / 60.0, 1.0) < 0.3)
