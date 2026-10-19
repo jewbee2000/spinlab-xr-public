@@ -1,8 +1,8 @@
 # Install and test the native Quest 2 APK
 
-These instructions are for the **v0.5.2 standalone Android/OpenXR app** with a physical operating console, lower, angled side analyzer, four-tab menu, floating guide, and controller-driven gloves. The older browser instructions remain in [INSTALL_QUEST2.md](INSTALL_QUEST2.md). After installation, the native app runs on the headset without a local web server, Quest Link, or a tethered gaming PC.
+These instructions are for the **v0.6.0 standalone Android/OpenXR app** with a physical operating console, lower, angled side analyzer, three-tab menu, floating guide, and controller-driven gloves. The older browser instructions remain in [INSTALL_QUEST2.md](INSTALL_QUEST2.md). After installation, the native app runs on the headset without a local web server, Quest Link, or a tethered gaming PC.
 
-Instructions updated 18 October 2026. Meta may change menu names. Headset feedback confirms v0.5 menu switching, pointers, and trigger selection. Check v0.5.2 hand button guides, controller orientation, enlarged floating tutorial, and lower side analyzer first; walking comfort, fingertip contact, report retrieval, and sustained performance require their own observations. Exact build/install evidence belongs in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md). See [UX_DESIGN.md](UX_DESIGN.md) for workspace and movement behavior.
+Instructions updated 18 October 2026. Meta may change menu names. In v0.5.1, the user confirmed upright lettering and acceptable guide/analyzer appearance, but reported incorrect controller button and joystick positions. Version 0.6.0 replaces those controller graphics and changes the menu/tutorial workflow; these changes need fresh headset feedback. Walking comfort, fingertip contact, report retrieval, and sustained performance require separate observations. Exact build/install evidence belongs in [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md). See [UX_DESIGN.md](UX_DESIGN.md) for workspace and movement behavior.
 
 ## 1. Enable developer mode and authorize this computer
 
@@ -49,10 +49,10 @@ The repository includes helpers: `tools/Install-APK.ps1` installs and launches `
 
 ## 3. Install the built APK
 
-The v0.5.2 build output is `artifacts/SpinLabXR-v0.5.2.apk` and its Android package is `us.teitelbaum.spinlabxr`. Build it with `tools/Build-APK.ps1`, or place the matching downloaded release APK at that path. In the same PowerShell window:
+The v0.6.0 build output is `artifacts/SpinLabXR-v0.6.0.apk` and its Android package is `us.teitelbaum.spinlabxr`. Build it with `tools/Build-APK.ps1`, or place the matching downloaded release APK at that path. In the same PowerShell window:
 
 ```powershell
-$spinlabApk = Join-Path (Get-Location) 'artifacts\SpinLabXR-v0.5.2.apk'
+$spinlabApk = Join-Path (Get-Location) 'artifacts\SpinLabXR-v0.6.0.apk'
 Test-Path -LiteralPath $spinlabApk
 & $spinlabAdb install -r $spinlabApk
 ```
@@ -65,19 +65,19 @@ Put on the headset, open **Library**, select **Unknown Sources**, and choose **S
 
 Start seated or standing with a clear boundary and both Touch controllers awake. **Keep holding the controllers.** The gloves use their tracked poses and inferred finger animation; you do not need to enable optical hand tracking in the headset settings.
 
-The normal workspace has **no open control menu**. A read-only guide next to each glove identifies the physical buttons: **left Y (upper) Menu / X (lower) Guide back**, **right B (upper) Menu / A (lower) Guide next**. It also shows the stick, grip, and trigger functions. These guides face the viewer, follow their hands, and disappear in pointer-menu mode. Use controller pointers in the B/Y menu for command buttons; the physical console is an optional alternative. Look at the lower, angled analyzer to the left of the guard for measurements and status. If startup guidance is enabled, a separate read-only card appears beside the work area. Read DO THIS and WHY, perform the action yourself, then press **A** to continue. Practical pages wait for the required accepted state; the hint explains what remains.
+The normal workspace has **no open control menu**. A read-only guide next to each glove identifies the physical buttons: **left Y (upper) Menu / X (lower) Guide back**, **right B (upper) Menu / A (lower) Guide next**. It also shows the stick, grip, and trigger functions. These guides face the viewer, follow their hands, and disappear in pointer-menu mode. Use the physical console caps for operating commands. Look at the lower, angled analyzer to the left of the guard for measurements and status. If startup guidance is enabled, a separate read-only card appears beside the work area. Read DO THIS and WHY, then perform the action yourself. The 15-stage guide advances after a confirmed physical action or completed measurement, with a 1.5-second success dwell. Acquisitions must finish analysis and coast to zero; a rejected, interrupted, or partial run does not count. These are balancing work instructions, with no menu-navigation exercises.
 
-Press **B/Y** to open the four-tab menu. Its controller models and rays replace the gloves while it is open. Point and use the index trigger; press B/Y or Close Menu to return to physical operation. Session provides **Pause/Resume Floating Guide**, **Restart Floating Guide**, **Skip Current Guide Lesson**, and **Guide at Startup: On/Off**. Pause/resume preserves the current page. Turning startup off changes later launches; completing the guide also turns it off. Instruction navigation does not reset the lab. [TUTORIAL.md](TUTORIAL.md) describes all 23 lessons.
+Press **B/Y** to open the three-tab menu. Its Quest controller models and rays replace the gloves while it is open. Meta runtime models are preferred, with pinned Quest 2 Touch assets as fallback. Where the runtime supplies valid controller-derived Capsense poses, translucent hands follow the fingers touching the controls. These poses do not provide optical-hand input. Point and use the index trigger; press B/Y or Close Menu to return to physical operation. Session provides **Pause/Resume Floating Guide**, **Restart Floating Guide**, **Skip Current Guide Lesson**, and **Guide at Startup: On/Off**. Pause/resume preserves the current page. Turning startup off changes later launches; completing the guide also turns it off. Instruction navigation does not reset the lab. **Session → New Session** deliberately resets the live laboratory; save reports first. Leave the app through the Quest system menu. [TUTORIAL.md](TUTORIAL.md) describes the balancing work instructions.
 
-| Action | Version 0.5.2 headset control |
+| Action | Version 0.6.0 headset control |
 | --- | --- |
-| Push a physical console button (optional) | Reach the visible index tip toward its front face and push through its short travel. Keep the index trigger released to extend the virtual finger. Withdraw before another press. A successful actuation gives one haptic click. |
+| Push a physical console button | Reach the visible index tip toward its front face and push through its short travel. Keep the index trigger released to extend the virtual finger. Withdraw before another press. A successful actuation gives one haptic click. |
 | Hold a nearby object/handle | Move the palm close until the `GRIP` hint appears, then squeeze and hold the controller's side grip. Release to let go. |
 | Load the rotor | Grip the tray rotor, carry it upright and centered over the spindle, then release. An unsuitable placement returns it to the tray. |
 | Open/close the guard | Grip the orange handle nearby. Lift the counterbalanced enclosure to open it; lower it fully and release to latch the interlock. |
 | Adjust a dial | Grip the nearby dial and rotate your wrist about its axis. The probe moves 0.5 mm per turn, mass changes 0.5 g per turn, and the angle dial follows the turn directly. Release to finish; nearby physical ± buttons make small increments. Thumbsticks do not turn dials. |
-| Open/close the menu | Press B/Y. Choose highlighted Operate, Balance, Analyze, or Session tabs by pointing and triggering. The menu suspends physical button/grip input and shows controller models and rays. Close it before reaching for the fixture. |
-| Continue/back in the guide | A continues when the current objective is ready; X goes back. The separate guide has no touch buttons. Session contains pause/resume, restart, skip lesson, and startup preference. |
+| Open/close the menu | Press B/Y. Choose highlighted Balance, Analyze, or Session tabs by pointing and triggering. The menu suspends physical button/grip input and shows controller models and rays. Close it before reaching for the fixture. |
+| Work instructions and review | Confirmed actions/completed measurements advance the 15 stages after a 1.5-second success cue. X reviews earlier instructions and pauses automatic progression; A returns forward to the current task or continues a ready task. The separate guide has no touch buttons. Session contains pause/resume, restart, skip lesson, and startup preference. |
 | Change chart | Use the physical CHART cap or the Analyze menu's chart control. A/X are reserved for guide navigation. |
 | Adjust workbench height | Left stick up/down adjusts height. There are no menu height buttons. Withdraw before touching a relocated target. |
 | Walk | Right stick moves along the floor relative to head direction, up to 0.65 m/s with a 0.18 dead zone and bounded work area. Movement is suspended while the menu is open, a mechanism is held, focus is lost, or required head/controller tracking is unavailable. Return the stick to neutral before resuming. |
@@ -85,7 +85,7 @@ Press **B/Y** to open the four-tab menu. Its controller models and rays replace 
 
 Loading and guard motion require nearby physical grips; menu rays cannot grab them remotely. Motor sonification starts muted. When tracking quality drops or a system menu interrupts the app, hands/contact are suspended and active holds are cancelled; release the grip and approach again after tracking returns. A fresh fingertip approach is also required after opening/closing menus or relocating the station.
 
-Use controller pointers in the B/Y menu for command buttons; close the menu to grip the rotor, guard, and dials. Physical caps duplicate commands as an optional alternative. The floating guide teaches the pointer workflow first. Follow it, or use this manual single-plane sequence:
+The physical console and nearby mechanisms provide the complete balancing procedure. The tutorial teaches that procedure and its science, without menu-navigation exercises. Follow it, or use this manual single-plane sequence:
 
 1. Grip the tray rotor, carry it upright to the spindle, and release to seat it. Push **Home Vibration Probe**.
 2. Grip the orange guard handle, lower fully, and release to latch. Push **Record Baseline**; wait for acquisition and coast-down to finish.
@@ -93,7 +93,7 @@ Use controller pointers in the B/Y menu for command buttons; close the menu to g
 4. After coast-down, push **Solve**. Open the guard physically and push **Fit Calculated Correction**; this replaces the trial mass with the calculated total correction.
 5. Lower/latch the guard and push **Verify**. Keep the measured baseline, trial, solution, and independent verification results for feedback.
 
-For two-plane mode, acquire a fresh baseline, fit and measure the plane-A trial, switch active plane to B, and fit/measure its independent trial before solving. The trial helper restores the other plane to its baseline masses; records retain the actual installed vectors. The scientific methods are unchanged from v0.2.
+For two-plane mode, acquire a fresh baseline, fit and measure the plane-A trial, switch active plane to B, and fit/measure its independent trial before solving. The trial helper restores the other plane to its baseline masses; records retain the actual installed vectors. The scientific methods retain their documented assumptions and synthetic-data limits.
 
 Check the new interactions as well as the lab sequence:
 
@@ -102,9 +102,9 @@ Check the new interactions as well as the lab sequence:
 3. Grip/carry/release the rotor, lift/latch the guard, and turn each dial. Confirm holding any mechanism inhibits a new acquisition. Check rejection of mass changes or opening the guard while the rotor is moving.
 4. Try running before setup, plus deliberate sensor/tach faults and E-stop recovery. Reset/release must not restart the rotor automatically.
 5. Change menu, move/recenter the station, and briefly interrupt tracking with the headset's system interface. Existing contact must not become a new press; reacquire the target deliberately.
-6. Try the floating guide's first-time sequence, A/X navigation, unmet-objective hints, Session pause/resume, skip, and restart during existing work. Check startup OFF across relaunch and confirm the guide does not block a mechanism or act as an extra touch panel. Record any truncated text or unclear action.
-7. Save a report and use section 5 to retrieve it. Earlier retrieval did not establish successful export; check this explicitly in v0.5.2 before relying on saved records.
-8. Run for at least five minutes through representative pressing, carrying, dials, guide/menu navigation, walking, and analysis. Observe comfort, frame pacing, and controller responsiveness. The Quest 2 starting target is 72 Hz (about 13.9 ms per frame interval). Earlier short runtime samples and a desktop FPS counter do not establish v0.5.2 sustained performance.
+6. Follow the guide without pressing A: verify one 1.5-second success cue per completed physical task and no progression from rejected actions or partial acquisitions. Then check optional A/X review, unmet-objective hints, Session pause/resume, skip, and restart during existing work. Check startup OFF across relaunch and confirm the guide does not block a mechanism or act as an extra touch panel. Record any truncated text or unclear action.
+7. Save a report and use section 5 to retrieve it. Earlier retrieval did not establish successful export; check this explicitly in v0.6.0 before relying on saved records.
+8. Run for at least five minutes through representative pressing, carrying, dials, guide/menu navigation, walking, and analysis. Observe comfort, frame pacing, and controller responsiveness. The Quest 2 starting target is 72 Hz (about 13.9 ms per frame interval). Earlier short runtime samples and a desktop FPS counter do not establish v0.6.0 sustained performance.
 
 Report what the headset actually does. An APK build, manifest inspection, or numerical unit test does not prove that the physical-controller and rendering checks passed.
 
@@ -146,7 +146,7 @@ From the project root, run `.\tools\Pull-Quest-Reports.ps1` for this signed deve
 | Rotor returns to the tray | Release it upright and centered over the spindle with the guard open and spindle stopped. |
 | Guard remains unlatched | Lower the handle fully before releasing it. A partially raised counterbalanced guard remains open. |
 | Thumbstick does not adjust a dial | The native app uses a nearby grip plus wrist rotation; the physical ± buttons offer fine increments. |
-| A does not advance the guide | Read its NEXT hint and complete the actual action; a rejected or interrupted run does not count. X goes back; Session can skip the lesson or pause guidance. |
+| Guide does not advance | Read the current task/hint and complete its physical action. A measurement must finish analysis and coast to zero, followed by the 1.5-second success dwell. Rejected or interrupted runs do not count. A/X offer optional review; Session can skip a stage or pause guidance. |
 | Guide opens on every launch | In Session, turn Guide at Startup OFF. Pause affects the current session; it does not change the startup preference. |
 | Right stick does not walk | Close the menu, release held mechanisms, restore tracked head/controllers and app focus, then return the stick to neutral before trying again. Check Session → Joystick Walking is ON. |
 | Left stick does not change height | Release held mechanisms, close the menu, restore tracking/focus, and return the stick to neutral before retrying. |
@@ -158,6 +158,8 @@ From the project root, run `.\tools\Pull-Quest-Reports.ps1` for this signed deve
 The project is `native/project.godot` and its export preset is **Quest 2**. Use the checked-in build tooling where available. For a manual Windows setup, install **Godot 4.7.2 stable** and its matching non-.NET export templates, **OpenJDK 17**, Android Platform-Tools, and the SDK command-line tools. The exact 4.7.2 Gradle template pins **Android Platform 36**, **Build-Tools 36.1.0**, and **NDK 29.0.14206865**. Install these versions for this build. Gradle 8.11.1 is supplied through its wrapper. The project targets SDK 35 with minimum SDK 29, while compiling against Platform 36; these are distinct settings. The general 4.7 export guide still lists older Android packages, so the tagged template is the authority for reproducibility. [Godot Android export guide](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_android.html), [4.7.2 Gradle configuration](https://github.com/godotengine/godot/blob/4.7.2-stable/platform/android/java/app/config.gradle), [Gradle wrapper pin](https://github.com/godotengine/godot/blob/4.7.2-stable/platform/android/java/gradle/wrapper/gradle-wrapper.properties).
 
 Set Godot's **Editor Settings → Export → Android** Java SDK Path and Android SDK Path. Native XR requires **OpenXR enabled**, **XR shaders enabled**, a tracked `XROrigin3D`/`XRCamera3D` scene, and correctly bound controller action maps. The APK preset should select ARM64 and OpenXR. If using the official **OpenXR Vendors 5.1.0** Meta plugin, install the Android Gradle build template and select **Enable Meta Plugin**, with Quest 2 support. The final APK manifest must identify an immersive Quest/OpenXR activity; the generic Android activity alone is insufficient evidence. [Godot XR setup](https://docs.godotengine.org/en/4.7/tutorials/xr/setting_up_xr.html), [vendors release](https://github.com/GodotVR/godot_openxr_vendors/releases/tag/5.1.0-stable).
+
+The checked-in XR settings enable Meta runtime controller models and controller-sourced hand poses. The vendor exporter adds the render-model/hand-tracking manifest declarations. Capsense uses `XR_EXT_hand_tracking_data_source` with the controller source and a controller-conforming motion range; it is visual only in the menu. Keep the pinned vendor plugin and these settings together when rebuilding. Runtime availability is checked before displaying the hand overlay.
 
 Use `tools/Build-APK.ps1` after installing the template. It exports the template's `.GodotApp` activity as well as the generated launcher alias so Meta's VR intent can resolve correctly. It keeps `show_as_launcher_app=false`: the lab must not become a replacement home launcher. Controller nodes use Godot's `left_hand`/`right_hand` tracker aliases and then select their `aim` or `grip` pose; OpenXR action-map paths remain `/user/hand/left` and `/user/hand/right`.
 
@@ -174,7 +176,7 @@ Both gloves / fingertip alignment / direct presses and retract:
 Rotor carry + upright seating / guard lift + full latch / wrist dials:
 Physical console / menu toggle, rays, selected tabs, close:
 Left-stick height / right-stick walking, stops, neutral rearm / recenter:
-Guide page / DO THIS-WHY readability / A-X navigation / readiness hint:
+Guide stage / DO THIS-WHY readability / automatic success dwell / optional A-X review:
 Pause-resume same page / skip lesson / startup OFF / restart:
 Tracking interruption and recovery:
 Readable text and seated/standing comfort:

@@ -138,7 +138,7 @@ func _fresh() -> void:
 	app.head_tracking_override = null
 	app.walk_distance_m = 0.0
 	app.height_changed = false
-	app.tab = "operate"
+	app.tab = "balance"
 	app.tutorial.skip()
 	app.guide_paused = false
 	for entry in [left, right]:
@@ -166,7 +166,7 @@ func _test_start_and_menu() -> void:
 	_check(not app.menu_open and not app.controls.visible, "Station starts with its menu hidden")
 	for button in app.buttons:
 		if button.get_meta("ui", false):_check(not button.enabled and button.collision_layer == 0, "Hidden menu leaves no active collider")
-	_check(app.menu_tab_buttons.size() == 4 and not app.menu_tab_buttons.has("learn"), "Explicit menu has four categories and separate guide")
+	_check(app.menu_tab_buttons.size() == 3 and not app.menu_tab_buttons.has("operate") and not app.menu_tab_buttons.has("learn"), "Menu omits redundant Operate tab and keeps three categories plus separate instructions")
 	app.tutorial.start(app._tutorial_context())
 	app._refresh_tutorial()
 	_check(app.tutorial_panel.visible and not app.controls.is_ancestor_of(app.tutorial_panel), "Guide remains independent of the hidden application menu")
@@ -176,7 +176,7 @@ func _test_start_and_menu() -> void:
 	_check(right.controller_visual.visible and not right.hand.visible, "Open menu replaces gloves with controller representations")
 	app._controller_released("by_button", right)
 	_check(app.menu_open, "B release cannot toggle the menu a second time")
-	for key in ["operate", "balance", "diagnostic", "session"]:
+	for key in ["balance", "diagnostic", "session"]:
 		app._action("tab:" + key)
 		var selected: int = 0
 		for tab_key in app.menu_tab_buttons:
@@ -195,26 +195,26 @@ func _test_pointer_rearming() -> void:
 	_fresh()
 	right.node.trigger = 1.0
 	app._controller_pressed("by_button", right)
-	right.ray.target = app.menu_tab_buttons.balance
+	right.ray.target = app.menu_tab_buttons.diagnostic
 	app._update_controllers(DT)
 	app._controller_pressed("trigger_click", right)
-	_check(app.tab == "operate" and not right.trigger_armed, "Opening menu with trigger held cannot select")
+	_check(app.tab == "balance" and not right.trigger_armed, "Opening menu with trigger held cannot select")
 	right.node.trigger = 0.0
 	app._update_controllers(DT)
 	_check(right.trigger_armed and right.aim_tracked, "Tracked neutral trigger rearms menu selection")
 	right.node.trigger = 1.0
 	app._controller_pressed("trigger_click", right)
-	_check(app.tab == "balance" and not right.trigger_armed, "Fresh tracked trigger selects the pointed real UI command once")
+	_check(app.tab == "diagnostic" and not right.trigger_armed, "Fresh tracked trigger selects the pointed real UI command once")
 	right.ray.target = app.menu_tab_buttons.session
 	app._controller_pressed("trigger_click", right)
-	_check(app.tab == "balance", "A held trigger cannot activate a replacement menu command")
+	_check(app.tab == "diagnostic", "A held trigger cannot activate a replacement menu command")
 	right.node.trigger = 0.0
 	app._update_controllers(DT)
 	right.node.trigger = 1.0
 	right.node.tracking = false
 	app._update_controllers(DT)
 	app._controller_pressed("trigger_click", right)
-	_check(app.tab == "balance", "Lost aim tracking blocks pointer commands")
+	_check(app.tab == "diagnostic", "Lost aim tracking blocks pointer commands")
 	right.node.tracking = true
 	app._update_controllers(DT)
 	_check(not right.trigger_armed, "Aim recovery with a held trigger still requires neutral")
@@ -245,7 +245,7 @@ func _test_pointer_rearming() -> void:
 	app._update_controllers(DT)
 	right.ray.target = app.menu_tab_buttons.session
 	app._controller_pressed("trigger_click", right)
-	_check(not app.menu_open and app.tab == "operate", "Trigger has no distant UI behavior with menu closed")
+	_check(not app.menu_open and app.tab == "balance", "Trigger has no distant UI behavior with menu closed")
 
 func _test_collision_layers() -> void:
 	_fresh()
@@ -278,8 +278,7 @@ func _test_pointer_outcome_boundary() -> void:
 	_fresh()
 	app.saved_path = ""
 	app.tutorial.start(app._tutorial_context())
-	for index in range(app.tutorial.steps.size()):
-		if app.tutorial.steps[index].id == "report":app.tutorial.index = index
+	while app.tutorial.steps[app.tutorial.index].id != "report":app.tutorial.skip_step()
 	_check(not app.tutorial.view(app._tutorial_context()).ready, "Report objective begins without a saved result")
 	# _physical_action logs pointer contact before command dispatch. Selection
 	# telemetry is not the accepted save outcome, which may still fail.
@@ -290,13 +289,13 @@ func _test_pointer_outcome_boundary() -> void:
 	app.simulate_save_failure = true
 	_pointer_select(_ui_button("save"))
 	_check(app.status.contains("injected I/O failure"), "Failed-save injection follows the actual menu pointer/command route")
-	_check(not app.tutorial.view(app._tutorial_context()).ready and not app.tutorial._flags.get("report_saved", false), "Failed pointer save cannot satisfy the report objective")
+	_check(not app.tutorial.view(app._tutorial_context()).ready, "Failed pointer save cannot satisfy the report objective")
 	_check(app.saved_path.is_empty(), "Failed-save command does not invent a saved file reference")
 	app.simulate_save_failure = false
 	app._action("tab:balance")
 	_pointer_select(_ui_button("apply"))
 	_check(app.model.solution.is_empty(), "Pointer Apply is rejected without a measured solution")
-	_check(not app.tutorial._flags.get("apply_seen", false), "Rejected pointer Apply cannot create an accepted application checkpoint")
+	_check(not app.tutorial.view(app._tutorial_context()).ready, "Rejected pointer Apply cannot create an accepted application checkpoint")
 
 func _pointer_select(button) -> void:
 	right.ray.target = button
@@ -409,36 +408,34 @@ func _test_guide_controls() -> void:
 	_fresh()
 	app.tutorial.start(app._tutorial_context())
 	app._refresh_tutorial()
-	app._controller_pressed("ax_button", right)
-	_check(app.tutorial.index == 1, "Right A advances a ready guide page")
-	app._controller_pressed("ax_button", right)
-	_check(app.tutorial.index == 1, "Right A cannot skip an unmet practical objective")
-	app._controller_pressed("ax_button", left)
-	_check(app.tutorial.index == 0, "Left X returns to previous guide page")
-	# Reading a guide turns the headset towards it. Next/Back must not use that
-	# changed heading to anchor it another step left and make it spiral away.
-	var anchored: Transform3D = app.tutorial_panel.global_transform
-	app.camera.look_at(app.tutorial_panel.global_position, Vector3.UP)
-	app._controller_pressed("ax_button", right)
-	_check(app.tutorial_panel.global_transform.is_equal_approx(anchored), "Guide stays world-anchored when looking at it and pressing Next")
-	app._controller_pressed("ax_button", left)
-	_check(app.tutorial_panel.global_transform.is_equal_approx(anchored), "Guide stays world-anchored while reading and pressing Back")
+	app._controller_pressed("ax_button",right)
+	_check(app.tutorial.index==0,"Manual Next cannot bypass the required rotor placement")
+	app._process(DT)
+	var anchored: Transform3D=app.tutorial_panel.global_transform
+	app.camera.look_at(app.tutorial_panel.global_position,Vector3.UP)
+	app._action("mount")
+	for frame in range(40):app._process(0.05)
+	_check(app.tutorial.index==1,"Confirmed rotor placement automatically advances to Home without pressing A")
+	_check(app.geometry.physical_by_action.home.guide_highlight,"Work instruction highlights physical HOME rather than a menu tab")
+	_check(app.tutorial_panel.global_transform.is_equal_approx(anchored),"Automatic progression preserves the guide world anchor")
+	app._controller_pressed("ax_button",left)
+	_check(app.tutorial.view(app._tutorial_context()).get("reviewing",false),"Left X reviews earlier work instructions without operating the lab")
+	var view_before: Dictionary=app.tutorial.view(app._tutorial_context())
 	app._set_menu_open(true)
-	app._controller_pressed("ax_button", right)
-	_check(app.tutorial.index == 0, "A does not secretly advance guidance behind the menu")
+	app._controller_pressed("ax_button",right)
+	_check(app.tutorial.view(app._tutorial_context()).id==view_before.id,"A does not navigate hidden work instructions behind a menu")
 	app._set_menu_open(false)
 	app.tutorial.skip()
-	var chart: String = app.chart_kind
-	app._controller_pressed("ax_button", right)
-	app._controller_pressed("ax_button", left)
-	_check(app.chart_kind == chart, "A/X are reserved for guide navigation rather than hidden chart shortcuts")
+	var chart: String=app.chart_kind
+	app._controller_pressed("ax_button",right)
+	app._controller_pressed("ax_button",left)
+	_check(app.chart_kind==chart,"A/X remain guide review rather than chart shortcuts")
 	app._action("tutorial:toggle")
-	app._controller_pressed("ax_button", right)
-	var lesson_index: int = app.tutorial.index
+	var lesson_index: int=app.tutorial.index
 	app._action("tutorial:toggle")
-	_check(not app.tutorial.active and app.guide_paused, "Pause closes the guide without discarding its current page")
+	_check(not app.tutorial.active and app.guide_paused,"Pause hides work instructions without discarding progress")
 	app._action("tutorial:toggle")
-	_check(app.tutorial.active and app.tutorial.index == lesson_index, "Resume retains the paused guide page and practice history")
+	_check(app.tutorial.active and app.tutorial.index==lesson_index,"Resume retains the unfinished work instruction")
 
 func _test_navigation() -> void:
 	_fresh()
@@ -556,7 +553,7 @@ func _test_hand_control_guides() -> void:
 	app._refresh_tutorial()
 	_check(_hand_legend_text(right).contains("off"),"Inactive tutorial marks the right-hand guide action off")
 	app.tutorial.start(app._tutorial_context())
-	app.tutorial.index=1
+	app.tutorial.index=0
 	app._refresh_tutorial()
 	_check(_hand_legend_text(right).contains("wait"),"Unmet tutorial objective marks Guide next as waiting")
 	for entry in [left,right]:

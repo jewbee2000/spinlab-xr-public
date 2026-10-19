@@ -1,7 +1,7 @@
 class_name TutorialPanel
 extends Node3D
 ## Read-only floating guide. The root positions it independently from the
-## four-tab menu and dispatches A/X/B/Y. This panel has no interaction targets.
+## station menu and dispatches optional review input. No interaction targets.
 
 signal command_requested(command: String)
 
@@ -32,8 +32,8 @@ func configure() -> void:
 	_font = ThemeDB.fallback_font
 	_box(Vector3(WIDTH_M, HEIGHT_M, 0.016), Vector3(0, 0, -0.010), Color("102532")).name = "GuideBackplate"
 	_box(Vector3(WIDTH_M, 0.003, 0.003), Vector3(0, HEIGHT_M / 2.0 - 0.002, 0.001), ACCENT).name = "GuideAccent"
-	labels.chapter = _label("ORIENT", Vector3(-0.43, 0.302, 0.008), SECONDARY_FONT_SIZE, SECONDARY_PIXEL_SIZE, ACCENT)
-	labels.progress = _label("Step 1 / 23", Vector3(0.43, 0.302, 0.008), SECONDARY_FONT_SIZE, SECONDARY_PIXEL_SIZE, TEXT)
+	labels.chapter = _label("PREPARE", Vector3(-0.43, 0.302, 0.008), SECONDARY_FONT_SIZE, SECONDARY_PIXEL_SIZE, ACCENT)
+	labels.progress = _label("Instruction 1 / 15", Vector3(0.43, 0.302, 0.008), SECONDARY_FONT_SIZE, SECONDARY_PIXEL_SIZE, TEXT)
 	labels.progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	labels.title = _label("Welcome to SpinLab", Vector3(-0.43, 0.259, 0.008), 34, 0.0008, TEXT)
 	_box(Vector3(TEXT_WIDTH_M, 0.004, 0.002), Vector3(0, 0.216, 0.007), Color("2b4655")).name = "ProgressTrack"
@@ -44,8 +44,8 @@ func configure() -> void:
 	labels.theory_heading = _label("WHY", Vector3(-0.43, 0.027, 0.008), SECONDARY_FONT_SIZE, SECONDARY_PIXEL_SIZE, ACCENT)
 	labels.theory = _label("", Vector3(-0.43, -0.006, 0.008), BODY_FONT_SIZE, BODY_PIXEL_SIZE, TEXT)
 	labels.hint = _label("", Vector3(-0.43, -0.146, 0.008), 25, 0.00076, ACCENT)
-	labels.legend = _label("A Continue  ·  X Back  ·  B/Y Menu", Vector3(-0.43, -0.216, 0.008), 27, 0.00078, TEXT)
-	labels.movement = _label("Right stick: walk  ·  Left stick: height", Vector3(-0.43, -0.263, 0.008), 24, 0.00076, TEXT)
+	labels.legend = _label("Automatic  ·  X Review  ·  B/Y Menu", Vector3(-0.43, -0.216, 0.008), 27, 0.00078, TEXT)
+	labels.movement = _label("Complete the work; the next instruction follows.", Vector3(-0.43, -0.263, 0.008), 24, 0.00076, TEXT)
 	# The old decorative footer is omitted to reserve real four-line blocks at
 	# the larger reading size. Keep the label key for presentation compatibility.
 	labels.footer = _label("", Vector3(-0.43, -0.310, 0.008), 22, 0.00074, TEXT)
@@ -65,10 +65,10 @@ func update_view(view: Dictionary) -> void:
 	if not _built:
 		return
 	overflowed = false
-	labels.chapter.text = _wrap(str(view.get("chapter", "ORIENT")), SECONDARY_FONT_SIZE, SECONDARY_PIXEL_SIZE, 1)
+	labels.chapter.text = _wrap(str(view.get("chapter", "PREPARE")), SECONDARY_FONT_SIZE, SECONDARY_PIXEL_SIZE, 1)
 	labels.title.text = _wrap(str(view.get("title", "Welcome to SpinLab")), 34, 0.0008, 1)
 	var step_index: int = maxi(0, int(view.get("index", int(view.get("step_index", 1)) - 1)))
-	var total: int = maxi(1, int(view.get("total", view.get("step_count", 23))))
+	var total: int = maxi(1, int(view.get("total", view.get("step_count", 15))))
 	labels.progress.text = str(view.get("progress", "Step %d / %d" % [step_index + 1, total]))
 	var fraction: float = clampf(float(step_index + 1) / float(total), 0, 1)
 	_progress_fill.scale.x = maxf(0.001, TEXT_WIDTH_M * fraction)
@@ -77,8 +77,13 @@ func update_view(view: Dictionary) -> void:
 	labels.theory.text = _wrap(str(view.get("theory", view.get("why", ""))), BODY_FONT_SIZE, BODY_PIXEL_SIZE, 4)
 	var ready: bool = bool(view.get("ready", false))
 	var hint: String = str(view.get("hint", view.get("gatehint", "")))
-	labels.hint.text = _wrap(("READY / " if ready else "NEXT / ") + hint, 25, 0.00076, 2) if not hint.is_empty() else ""
-	labels.legend.text = "A Finish  ·  X Back  ·  B/Y Menu" if bool(view.get("is_last", false)) else "A Continue  ·  X Back  ·  B/Y Menu"
+	labels.hint.text = _wrap(("COMPLETE / " if ready and not bool(view.get("review", false)) else "NEXT / ") + hint, 25, 0.00076, 2) if not hint.is_empty() else ""
+	if bool(view.get("review", false)):
+		labels.legend.text = "A Forward  ·  X Review  ·  B/Y Menu"
+		labels.movement.text = "Review pauses automatic work guidance."
+	else:
+		labels.legend.text = "Automatic  ·  X Review  ·  B/Y Menu"
+		labels.movement.text = "A Continue now" if ready else "Complete the work; the next instruction follows."
 
 func set_panel_active(active: bool) -> void:
 	_active = active

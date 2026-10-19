@@ -76,34 +76,27 @@ func _test_console(geometry) -> void:
 
 
 func _test_controllers() -> void:
-	var controllers: Array=[]
 	for side in ["left_hand","right_hand"]:
 		var controller=Controller.new()
-		controller.configure(side)
-		root.add_child(controller)
-		controllers.append(controller)
-		_check(is_equal_approx(controller.model_root.basis.determinant(),1.0),"Controller attaches directly to a proper grip basis")
-		_check(controller.model_root.has_node("TrackingRing") and controller.model_root.has_node("ErgonomicHandle"),"Controller silhouette includes its handle and ring")
-		_check(controller.button_labels.size()==2,"Controller exposes two readable face-button labels")
-		_check(controller.button_labels[0].text==("X" if side=="left_hand" else "A"),"Controller face labels match handed controls")
-		var meshes: Array=controller.find_children("*","MeshInstance3D",true,false)
-		var instances: Array=controller.find_children("*","MultiMeshInstance3D",true,false)
-		var labels: Array=controller.find_children("*","Label3D",true,false)
-		_check(meshes.size()+instances.size()+labels.size()<=20,"Controller stays within twenty estimated draw batches")
+		controller.configure(side);root.add_child(controller)
+		_check(controller.visual_source=="bundled_quest2","Controller uses the actual Quest 2 GLB asset")
+		_check(controller.model_root.basis.determinant()>0.999,"Source controller frame remains a proper rotation")
+		_check(controller.controls.size()==8,"Authored trigger, squeeze, stick and face-button ranges bind")
+		_check(controller.controls.primary_click.name==("x_button_pressed_value" if side=="left_hand" else "a_button_pressed_value"),"Source face control matches handed hardware")
+		var meshes: Array=controller.model_root.find_children("*","MeshInstance3D",true,false)
+		_check(meshes.size()==6,"Source controller uses six mesh parts")
+		_check(controller.find_children("*","Label3D",true,false).is_empty(),"Textured source lettering replaces invented labels")
+		_check(controller.find_children("*","CollisionObject3D",true,false).is_empty(),"Controller remains a noninteractive visualization")
 		for mesh in meshes:
-			_check(mesh.mesh!=null and mesh.position.is_finite(),"Controller geometry and transform are valid")
+			_check(mesh.mesh!=null and mesh.transform.is_finite(),"Controller asset geometry and transform are valid")
 		controller.set_pose(0,0)
-		var rest: Vector3=controller._trigger.position
+		var rest: Transform3D=controller.controls.trigger.transform
 		controller.set_pose(1,1)
-		_check(controller._trigger.position.distance_to(rest)>0.005,"Controller trigger visibly responds to index input")
+		_check(not controller.controls.trigger.transform.is_equal_approx(rest),"Controller trigger follows authored rotation")
 		for input in [Vector2(-9,8),Vector2(NAN,INF),Vector2.ONE]:
 			controller.set_pose(input.x,input.y)
-			_check(controller._trigger.position.is_finite() and controller._grip.position.is_finite(),"Controller input clamps invalid curl values")
+			_check(controller.controls.trigger.transform.is_finite() and controller.controls.grip.transform.is_finite(),"Controller input clamps invalid analog values")
 		controller.visible=false
-	var left=controllers[0];var right=controllers[1]
-	_check(is_equal_approx(left._grip.position.x,-right._grip.position.x),"Side grip buttons mirror correctly")
-	for index in range(2):
-		_check(is_equal_approx(left.button_labels[index].position.x,-right.button_labels[index].position.x),"Face-control layout mirrors without negative scale")
 
 
 func _render_qa(geometry) -> void:
@@ -134,10 +127,10 @@ func _render_qa(geometry) -> void:
 		var controller=Controller.new()
 		controller.configure("left_hand" if index==0 else "right_hand")
 		root.add_child(controller)
-		controller.position=Vector3(0.11 if index==0 else -0.11,0,0)
-		controller.rotation.y=deg_to_rad(-10 if index==0 else 10)
+		controller.position=Vector3(-0.11 if index==0 else 0.11,0,0)
+		controller.basis=Basis(Vector3.RIGHT,PI/2)
 		controller.set_pose(0.7 if index==0 else 0.0,0.6 if index==0 else 0.0)
-	camera.position=Vector3(0,-0.24,-0.36);camera.look_at(Vector3(0,0,-0.005));camera.fov=48
+	camera.position=Vector3(0,0.32,0.34);camera.look_at(Vector3(0,0,0.01));camera.fov=48
 	await _save_frame("virtual-controllers-qa.png")
 
 

@@ -10,8 +10,9 @@ const Tutorial = preload("res://scripts/lab_tutorial.gd")
 const LessonPanel = preload("res://scripts/tutorial_panel.gd")
 const ControllerVisual = preload("res://scripts/virtual_controller.gd")
 const HandGuide = preload("res://scripts/hand_control_guide.gd")
+const CapsenseHand = preload("res://scripts/controller_capsense_hand.gd")
 const Navigation = preload("res://scripts/operator_navigation.gd")
-const APP_VERSION = "0.5.2"
+const APP_VERSION = "0.6.0"
 const TEAL = Color("6ce5c9")
 const INK = Color("e6f1f5")
 const DIM = Color("9db7c6")
@@ -27,7 +28,7 @@ var buttons: Array = []
 var readouts: Dictionary = {}
 var chart
 var chart_kind := "sweep"
-var tab := "operate"
+var tab := "balance"
 var status := "Welcome. Load the rotor, home the probe, and close the guard."
 var coach := true
 var exploded := false
@@ -231,10 +232,10 @@ func _build_controls() -> void:
 	add_child(controls)
 	control_backplate=_box(controls,Vector3(0.88,0.80,0.028),Vector3(0,-0.035,0),Color("132634"))
 	_label(controls,"STATION CONTROLS",Vector3(-0.39,0.335,0.024),27,0.00059,TEAL)
-	for i in range(4):
-		var keys=["operate","balance","diagnostic","session"]
-		var titles=["OPERATE","BALANCE","ANALYZE","SESSION"]
-		menu_tab_buttons[keys[i]]=_button(controls,titles[i],"tab:"+keys[i],Vector3(-0.315+i*0.21,0.255,0.027),0.196,0.055)
+	for i in range(3):
+		var keys=["balance","diagnostic","session"]
+		var titles=["BALANCE","ANALYZE","SESSION"]
+		menu_tab_buttons[keys[i]]=_button(controls,titles[i],"tab:"+keys[i],Vector3(-0.27+i*0.27,0.255,0.027),0.25,0.055)
 	_button(controls,"B / Y   CLOSE MENU","menu:close",Vector3(0,-0.365,0.029),0.78,0.055)
 	_rebuild_menu()
 
@@ -244,10 +245,9 @@ func _rebuild_menu() -> void:
 		if button.get_meta("menu",false):buttons.erase(button);button.queue_free()
 	var items: Array=[]
 	match tab:
-		"operate":items=[["HOME VIBRATION PROBE","home"],["RECORD BASELINE","baseline"],["STOP / CONTROLLED COAST","stop"],["EMERGENCY STOP","estop"],["RELEASE / RESET FAULT","recover"],["MODE: SINGLE / TWO PLANE","mode"],["TEST SPEED: 900 /1200 /1500","speed"],["NEW SESSION · RESET LAB","new"]]
 		"balance":items=[["FIT KNOWN TRIAL +0.250 g","fit_trial"],["MEASURE TRIAL · PLANE A","trial_a"],["MEASURE TRIAL · PLANE B","trial_b"],["SOLVE INFLUENCE MATRIX","solve"],["FIT CALCULATED CORRECTION","apply"],["VERIFY CORRECTED ROTOR","verify"],["REPEATABILITY · THREE RUNS","repeat"],["ACTIVE PLANE: A / B","plane"]]
 		"diagnostic":items=[["RUN RESONANCE SPEED SWEEP","sweep"],["CHART: TIME / ORDER / SWEEP","chart"],["TEST SPEED: 900 /1200 /1500","speed"],["INJECT SENSOR DISCONNECT","fault_sensor"],["INJECT TACHOMETER LOSS","fault_tach"],["EXPLODE / ASSEMBLE FIXTURE","explode"],["MOTOR SONIFICATION: ON/OFF","sound"],["GUIDED COACH: ON / OFF","coach"]]
-		"session":items=[["SAVE TRACEABLE JSON REPORT","save"],["PAUSE / RESUME FLOATING GUIDE","tutorial:toggle"],["RESTART FLOATING GUIDE","tutorial:restart"],["SKIP CURRENT GUIDE LESSON","tutorial:skip_step"],["GUIDE AT STARTUP: ON/OFF","tutorial:startup"],["RECENTER AT WORKBENCH","recenter"],["JOYSTICK WALKING: ON/OFF","walk_toggle"],["EXIT APPLICATION","exit"]]
+		"session":items=[["SAVE TRACEABLE JSON REPORT","save"],["PAUSE / RESUME FLOATING GUIDE","tutorial:toggle"],["RESTART FLOATING GUIDE","tutorial:restart"],["SKIP CURRENT GUIDE LESSON","tutorial:skip_step"],["GUIDE AT STARTUP: ON/OFF","tutorial:startup"],["RECENTER AT WORKBENCH","recenter"],["JOYSTICK WALKING: ON/OFF","walk_toggle"],["NEW SESSION · RESET LAB","new"]]
 	for i in items.size():
 		var caption=str(items[i][0])
 		if items[i][1]=="tutorial:startup":caption="GUIDE AT STARTUP: "+("ON" if tutorial.startup_enabled else "OFF")
@@ -275,6 +275,7 @@ func _set_menu_open(open: bool) -> void:
 		entry.trigger_armed=false
 		entry.hand.visible=entry.tracked and not open
 		entry.controller_visual.visible=entry.tracked and open
+		entry.capsense_hand.set_active(open and input_focused and _head_tracking_valid(),entry.tracked)
 		_update_hand_guide(entry)
 		if is_instance_valid(entry.beam):entry.beam.visible=false
 	if open:_place_menu()
@@ -328,7 +329,7 @@ func _build_instrument() -> void:
 	readouts["axis"]=_label(monitor,"",Vector3(0.035,-0.19,0.034),23,0.00060,DIM)
 	readouts["status"]=_label(monitor,"",Vector3(-0.84,-0.33,0.034),26,0.00060,DIM)
 	readouts["coach"]=_label(monitor,"",Vector3(-0.84,-0.405,0.034),25,0.00058,TEAL)
-	readouts["hands"]=_label(station,"B/Y MENU  ·  A GUIDE NEXT  ·  X BACK\nLEFT STICK HEIGHT  ·  RIGHT STICK WALK",Vector3(-0.73,0.49,-0.89),23,0.00055,TEAL)
+	readouts["hands"]=_label(station,"B/Y MENU  ·  GUIDE ADVANCES AUTOMATICALLY  ·  X REVIEW\nLEFT STICK HEIGHT  ·  RIGHT STICK WALK",Vector3(-0.73,0.49,-0.89),23,0.00055,TEAL)
 
 func _build_guide() -> void:
 	tutorial_panel=LessonPanel.new();tutorial_panel.name="FloatingGuide";add_child(tutorial_panel);tutorial_panel.configure()
@@ -397,7 +398,7 @@ func _build_dials() -> void:
 func _build_desktop_hud() -> void:
 	if xr_active:return
 	var layer=CanvasLayer.new();add_child(layer)
-	var label=Label.new();label.text="SPINLAB XR  /  NATIVE ENGINEERING LAB    v"+APP_VERSION+"\nDrag right mouse to orbit · Wheel to zoom · Click world controls · M menu · 1/2/3/4 tabs · Space guide next · Backspace guide back"
+	var label=Label.new();label.text="SPINLAB XR  /  NATIVE ENGINEERING LAB    v"+APP_VERSION+"\nDrag right mouse to orbit · Wheel to zoom · Click world controls · M menu · 1/2/3 tabs · Space guide next · Backspace guide back"
 	label.position=Vector2(24,18);label.add_theme_font_size_override("font_size",18);label.modulate=TEAL;layer.add_child(label)
 	desktop_status=Label.new();desktop_status.position=Vector2(24,930);desktop_status.add_theme_font_size_override("font_size",16);desktop_status.modulate=DIM;layer.add_child(desktop_status)
 	var hud=HBoxContainer.new();hud.position=Vector2(24,90);layer.add_child(hud)
@@ -417,7 +418,7 @@ func _action(command: String, input_kind: String="") -> void:
 		_update_ui();return
 	if command.begins_with("tab:"):
 		tab=command.trim_prefix("tab:")
-		if tab not in ["operate","balance","diagnostic","session"]:tab="operate"
+		if tab not in ["balance","diagnostic","session"]:tab="balance"
 		tutorial.observe(_tutorial_context(),{"command":command,"ok":true,"input_kind":input_kind})
 		_rebuild_menu();_update_ui();return
 	if command.begins_with("nudge:"):
@@ -490,7 +491,8 @@ func _refresh_tutorial() -> void:
 	for button in buttons:
 		if is_instance_valid(button):button.guide_highlight=false
 	if tutorial.active and not menu_open:
-		var target: Node3D=null
+		var target: Node3D=geometry.physical_by_action.get(str(view.target),null)
+		if target is LabButton:target.guide_highlight=true
 		match str(view.target):
 			"rotor","mount":target=geometry.rotor_grab
 			"guard":target=geometry.guard_handle
@@ -511,7 +513,7 @@ func _tutorial_action(command: String) -> void:
 			status="Guide at startup: "+("ON" if tutorial.startup_enabled else "OFF") if result.ok else result.message
 		"tutorial:restart":tutorial.start(context);guide_paused=false;status="Floating guide restarted. Lab measurements are preserved."
 		"tutorial:practice":
-			_set_menu_open(false);status="Use the illuminated physical station controls. A continues; X goes back."
+			_set_menu_open(false);status="Follow the physical balancing instructions. Correct actions advance the guide automatically."
 		"tutorial:back":status=tutorial.back().message
 		"tutorial:skip_step":status=tutorial.skip_step().message
 		"tutorial:next","tutorial:open_next":status=tutorial.next(context).get("message","")
@@ -523,7 +525,7 @@ func _tutorial_action(command: String) -> void:
 
 func _tutorial_report() -> Dictionary:
 	var view=tutorial.view(_tutorial_context())
-	return {"active":tutorial.active,"step_id":view.id,"step_index":tutorial.index,"step_count":tutorial.steps.size(),"completed":tutorial.completed,"startup_enabled":tutorial.startup_enabled,"note":"Tutorial progress is self-paced guidance, separate from measurement verification or operator qualification."}
+	return {"active":tutorial.active,"step_id":view.id,"step_index":tutorial.index,"step_count":tutorial.steps.size(),"completed":tutorial.completed,"startup_enabled":tutorial.startup_enabled,"note":"Work-instruction progress records confirmed steps, separate from operator qualification; inspect the independent scientific verification."}
 
 func _set_dial(kind: String, value: float) -> void:
 	var previous=_dial_value(kind)
@@ -537,7 +539,7 @@ func _set_dial(kind: String, value: float) -> void:
 func _coach_text(t: Dictionary) -> String:
 	if tutorial!=null and tutorial.active:
 		var lesson=tutorial.view(_tutorial_context())
-		return "%s / %s · %s"%[lesson.progress,lesson.title,"A: continue" if lesson.ready else "Follow the floating guide"]
+		return "%s / %s · %s"%[lesson.progress,lesson.title,"Step confirmed" if lesson.ready else "Follow the work instruction"]
 	if not coach:return "EXPERT LAB / "+model.mode.replace("_"," ").to_upper()+" / Active correction plane "+("A" if active_plane==0 else "B")
 	if t.get("fault","")!="":return "FAULT RECOVERY / wait for zero speed; release E-stop, close guard, then reset."
 	if t.get("running",false):return "ACQUIRING / keep guard closed. Tach reference separates 1× vibration from noise."
@@ -679,9 +681,13 @@ func _make_hand_entry(controller: Node3D, grip_node: Node3D) -> Dictionary:
 	var hand=HandVisual.new();hand.configure(side);grip_node.add_child(hand)
 	var controller_visual=ControllerVisual.new();controller_visual.configure(side);grip_node.add_child(controller_visual);controller_visual.visible=false
 	var control_guide=HandGuide.new();control_guide.configure(side);grip_node.add_child(control_guide)
+	var capsense_hand=CapsenseHand.new();capsense_hand.configure(side);rig.add_child(capsense_hand)
+	if xr_active:
+		controller_visual.enable_runtime()
+		capsense_hand.enable_runtime(xr_interface)
 	var hint=Label3D.new();hint.font_size=25;hint.pixel_size=0.00065;hint.position=Vector3(0.08,0.04,0.04);hint.modulate=TEAL;hint.outline_size=0;hint.billboard=BaseMaterial3D.BILLBOARD_ENABLED;grip_node.add_child(hint)
 	var reticle=MeshInstance3D.new();var sphere=SphereMesh.new();sphere.radius=0.005;sphere.height=0.010;reticle.mesh=sphere;reticle.material_override=_material(TEAL,true);controller.add_child(reticle);reticle.visible=false
-	return {"node":controller,"grip_node":grip_node,"hand":hand,"controller_visual":controller_visual,"control_guide":control_guide,"reticle":reticle,"hint":hint,"held":"","held_target":null,"dial":"","raw":0.0,"contacts":{},"near":null,"tracked":false,"aim_tracked":false,"trigger_armed":false,"grip_down":false,"grip_armed":false,"by_started":-1,"by_handled":false,"ray":null,"beam":null}
+	return {"node":controller,"grip_node":grip_node,"hand":hand,"controller_visual":controller_visual,"control_guide":control_guide,"capsense_hand":capsense_hand,"reticle":reticle,"hint":hint,"held":"","held_target":null,"dial":"","raw":0.0,"contacts":{},"near":null,"tracked":false,"aim_tracked":false,"trigger_armed":false,"grip_down":false,"grip_armed":false,"by_started":-1,"by_handled":false,"ray":null,"beam":null}
 
 func _update_hand_guide(entry: Dictionary) -> void:
 	entry.control_guide.update_placement(entry.grip_node.global_position,camera.global_transform,input_focused and entry.get("tracked",false) and not menu_open and _head_tracking_valid())
@@ -854,7 +860,9 @@ func _on_pose_recentered() -> void:
 func _apply_input_focus() -> void:
 	input_focused=app_has_focus and xr_has_focus
 	if not input_focused:
-		for entry in controllers:entry.control_guide.visible=false
+		for entry in controllers:
+			entry.control_guide.visible=false
+			entry.capsense_hand.set_active(false,false)
 	motion_armed=false;height_armed=false
 	guide_anchor_pending=true
 	_cancel_hand_interactions()
@@ -878,6 +886,7 @@ func _update_controllers(delta: float) -> void:
 		if not aim_tracked:entry.trigger_armed=false
 		entry.hand.visible=tracked and not menu_open
 		entry.controller_visual.visible=tracked and menu_open
+		entry.capsense_hand.set_active(menu_open and input_focused and _head_tracking_valid(),tracked)
 		_update_hand_guide(entry)
 		entry.hint.visible=tracked and not menu_open
 		entry.reticle.visible=false
@@ -891,7 +900,7 @@ func _update_controllers(delta: float) -> void:
 		if aim_tracked and trigger<0.2:entry.trigger_armed=true
 		if menu_open:
 			entry.contacts.clear();entry.grip_armed=false;entry.grip_down=false
-			entry.controller_visual.set_pose(trigger,grip)
+			entry.controller_visual.update_inputs({"trigger":trigger,"grip":grip,"stick":c.get_vector2("primary"),"stick_click":c.is_button_pressed("primary_click"),"primary_click":c.is_button_pressed("ax_button"),"secondary_click":c.is_button_pressed("by_button"),"primary_touch":c.is_button_pressed("ax_touch"),"secondary_touch":c.is_button_pressed("by_touch"),"stick_touch":c.is_button_pressed("primary_touch"),"trigger_touch":c.is_button_pressed("trigger_touch")},delta)
 			if aim_tracked and is_instance_valid(entry.ray) and is_instance_valid(entry.beam):
 				entry.ray.force_raycast_update()
 				var length=3.0
@@ -975,7 +984,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if not hit.is_empty() and hit.collider.is_visible_in_tree() and (not hit.collider is LabButton or hit.collider.enabled):_action(str(hit.collider.get_meta("action","")))
 	if event is InputEventMouseMotion and mouse_drag:desktop_yaw-=event.relative.x*0.004;desktop_pitch=clampf(desktop_pitch-event.relative.y*0.003,-0.9,0.15);_desktop_camera()
 	if event is InputEventKey and event.pressed:
-		if event.keycode in [KEY_1,KEY_2,KEY_3,KEY_4]:_action("tab:"+["operate","balance","diagnostic","session"][event.keycode-KEY_1])
+		if event.keycode in [KEY_1,KEY_2,KEY_3]:_action("tab:"+["balance","diagnostic","session"][event.keycode-KEY_1])
 		if event.keycode==KEY_M:_set_menu_open(not menu_open)
 		if event.keycode==KEY_SPACE:_tutorial_action("tutorial:next")
 		if event.keycode==KEY_BACKSPACE:_tutorial_action("tutorial:back")
@@ -1006,6 +1015,9 @@ func _process(delta: float) -> void:
 			if menu_open:_place_menu()
 			else:_place_guide()
 	model.tick(minf(delta,0.05))
+	if tutorial.active and input_focused and not menu_open and (not xr_active or _head_tracking_valid()):
+		var progress=tutorial.tick(minf(delta,0.05),_tutorial_context())
+		if progress.get("advanced",false) or progress.get("finished",false):_update_ui()
 	var t={"rpm":model.rpm,"time":model.time,"mounted":model.mounted,"guard_closed":model.guard_closed,"sensor_position_mm":model.sensor_position_mm,"masses":model.masses,"angles":model.angles,"mode":model.mode}
 	geometry.update_state(t)
 	if xr_active:_update_controllers(delta)
