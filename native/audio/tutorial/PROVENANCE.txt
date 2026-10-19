@@ -1,0 +1,52 @@
+SpinLab XR tutorial narration provenance
+
+The 15 Ogg Vorbis files are synthetic speech generated locally from the
+project-authored English scripts in tools/Generate-TutorialNarration.py.
+Voice: Kokoro v1.0 af_heart, American English female, speed 1.0.
+Project terms for scripts and generated assets: see repository LICENSE.
+Third-party components retain their respective license terms.
+
+MODEL AND VOICE EMBEDDINGS
+Kokoro-82M v1.0 by hexgrad; Apache License 2.0.
+https://huggingface.co/hexgrad/Kokoro-82M
+https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md
+Code/license reference commit: dfb907a02bba8152ca444717ca5d78747ccb4bec
+https://github.com/hexgrad/kokoro/blob/dfb907a02bba8152ca444717ca5d78747ccb4bec/LICENSE
+Model conversion/download release maintained by thewh1teagle:
+https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.1
+kokoro-v1.0.onnx SHA256:
+beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a
+voices-v1.0.bin SHA256:
+bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d
+Full model license: LICENSE-KOKORO-APACHE-2.0.txt.
+Upstream model-card training acknowledgments include Koniwa (CC BY 3.0)
+and SIWIS (CC BY 4.0); see the model card for original references.
+The app does not distribute the model, voice bundle, or training audio.
+
+OFFLINE GENERATION TOOL
+kokoro-onnx 0.6.1, MIT, copyright (c) 2025 github.com/thewh1teagle.
+https://github.com/thewh1teagle/kokoro-onnx
+Source/license reference commit: 3596b26764286a7de9d90c363e988d50578918e5
+Full wrapper license: LICENSE-KOKORO-ONNX-MIT.txt.
+ONNX Runtime, NumPy, phonemizer, espeak-ng and libsndfile are workstation
+build-time dependencies only. Their installed packages retain their licenses
+in the ignored generation environment. They are not bundled into the APK.
+In particular, phonemizer and the espeak-ng phonemization engine use GPL-3.0;
+espeakng-loader is the MIT Python wrapper for that separate GPL engine.
+The engine supplies phonemes to Kokoro; its synthesized voice is not used.
+The complete GPL text is retained in LICENSE-GENERATION-TOOLS-GPL-3.0.txt.
+https://github.com/bootphon/phonemizer/blob/master/LICENSE
+https://github.com/espeak-ng/espeak-ng/blob/master/COPYING
+Python SoundFile is BSD-3-Clause; its libsndfile encoding library is LGPL-2.1.
+The complete LGPL text is retained in LICENSE-GENERATION-LIBSNDFILE-LGPL-2.1.txt.
+https://github.com/libsndfile/libsndfile/blob/master/COPYING
+ONNX Runtime is MIT. The installed NumPy wheel records BSD-3-Clause, 0BSD,
+MIT, Zlib and CC0-1.0 terms for its included components.
+None of these generation tools is embedded, imported, or executed on Quest.
+
+OUTPUT FORMAT AND VERIFICATION
+Mono 24,000 Hz Ogg Vorbis. Manifest records the exact transcript, measured
+duration, file SHA256, bytes, voice settings and generator versions.
+The generator checks tutorial-ID coverage, finite audio, decoded duration,
+clipping/near-silence and hashes. These checks do not replace human listening.
+Quest plays the committed audio without inference or a network service.

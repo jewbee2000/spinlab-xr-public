@@ -5,6 +5,7 @@ extends SceneTree
 ## This suite does not establish headset pose fit, stereo or physical usability.
 class SilentGuide extends "res://scripts/main.gd":
 	func _setup_sound() -> void:pass
+	func _init() -> void:narration_enabled=false;narration_settings_path=""
 
 class TestController extends Node3D:
 	var tracker: StringName = &"right_hand"
@@ -59,8 +60,8 @@ func _step(id: String) -> void:
 	app._update_ui()
 	var view: Dictionary = _view()
 	_check(view.id == id, "Current instruction: expected " + id + ", actual " + str(view.id))
-	_check(app.tutorial_panel.labels.title.text == view.title, "Visible guide title follows actual instruction")
-	_check(app.tutorial_panel.labels.progress.text.ends_with("/ 15"), "Visible progress shows 15 work instructions")
+	_check(app.tutorial_panel.labels.title.text == str(app.tutorial_panel.SHORT_ACTIONS.get(view.id,"Follow highlighted target")), "Minimal imperative follows actual instruction")
+	_check(app.tutorial_panel.labels.progress.text.ends_with("/15"), "Visible progress shows 15 work instructions")
 
 func _frames(count: int) -> void:
 	for frame in range(count):app._process(DT)

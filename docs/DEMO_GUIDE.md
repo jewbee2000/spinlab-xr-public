@@ -1,8 +1,8 @@
 # SpinLab XR — demonstration and recording guide
 
-This guide provides a repeatable demonstration of the native version 0.6.0 reaction-wheel balancing lab: its physical console, lower side analyzer, three-tab menu, floating guide, measured trial-mass correction, and diagnosis. All instrument data are synthetic. Use [APK_SETUP.md](APK_SETUP.md) for installation and controls, [UX_DESIGN.md](UX_DESIGN.md) for workspace/movement, [TUTORIAL.md](TUTORIAL.md) for lessons, [NATIVE_RESEARCH.md](NATIVE_RESEARCH.md) for analytical assumptions, and [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md) for the current test record.
+This guide provides a repeatable demonstration of the native version 0.7.0 reaction-wheel balancing lab: its physical console, lower side analyzer, three-tab menu, floating guide, measured trial-mass correction, and diagnosis. All instrument data are synthetic. Use [APK_SETUP.md](APK_SETUP.md) for installation and controls, [UX_DESIGN.md](UX_DESIGN.md) for workspace/movement, [TUTORIAL.md](TUTORIAL.md) for lessons, [NATIVE_RESEARCH.md](NATIVE_RESEARCH.md) for analytical assumptions, and [NATIVE_VALIDATION.md](NATIVE_VALIDATION.md) for the current test record.
 
-Earlier headset observations establish the visible lab, controller interactions, and spinning rotor. The user confirmed v0.5.1 lettering was upright and the guide/analyzer looked acceptable, but reported incorrect controller button/stick positions. Version 0.6.0 requires its own hardware acceptance for console reach, analyzer sightlines, fingertip contact, menu/controller mode, guide readability, movement, and sustained performance. Identify each capture by its actual installed build.
+Earlier headset observations establish the visible lab, controller interactions, and spinning rotor. The user confirmed automatic Load → HOME → Guard progression in v0.6.0, and requested smaller hardware-aligned hand markers and contextual spoken guidance. Version 0.7.0 requires its own hardware acceptance for console reach, analyzer sightlines, fingertip contact, menu/controller mode, guide readability, movement, and sustained performance. Identify each capture by its actual installed build.
 
 ## Prepare the session
 
@@ -16,10 +16,10 @@ The native app runs without a web server after installation. Browser version 0.1
 
 ## Floating guide demonstration
 
-1. With startup guidance enabled, show the separate DO THIS/WHY card beside the fixture. Explain that its 15 stages follow physical balancing work, without teaching menu navigation or operating the lab automatically.
-2. Seat the rotor, press the physical Home cap, lower/latch the guard, and record the baseline as instructed. Keep the menu closed while manipulating the fixture. Capture each confirmed task's 1.5-second success cue and automatic transition without pressing A.
+1. With startup guidance enabled, show the minimal action prompt beside the current target and hear the offline spoken instruction. Explain that its 15 stages follow physical balancing work, without teaching menu navigation or operating the lab automatically.
+2. Seat the rotor, press the physical Home cap, lower/latch the guard, and record the baseline as instructed. Keep the menu closed while manipulating the fixture. Capture the spoken explanation, then each confirmed task's 1.5-second Done cue and automatic transition without pressing A.
 3. Capture a rejected or incomplete action: the current stage must remain until its accepted condition is met. Acquisitions must finish analysis and coast to zero before a completed-measurement stage advances.
-4. Follow known trial → measured response → solve → installed correction → fresh verification. Compare WHY with actual analyzer data. Progression after a completed verification does not itself mean the measured correction passed.
+4. Follow known trial → measured response → solve → installed correction → fresh verification. Compare the spoken explanation with actual analyzer data. Progression after a completed verification does not itself mean the measured correction passed.
 5. Demonstrate X for optional review: automatic progression pauses until A returns forward to the current task. In Session, pause/resume the guide, skip a stage, and set startup OFF. Restart during existing work and show preserved lab records. Close the menu before review or physical grips.
 6. Capture guide completion separately from lab verification. Skipped instructions and completion history are not evidence that every operation was performed or competence was assessed.
 
@@ -54,7 +54,7 @@ Keep test speed, probe position, and acquisition conditions consistent across ba
 
 | Scenario | Demonstrate | Evidence to retain |
 | --- | --- | --- |
-| Guided learning | Read DO THIS/WHY, perform the actual task, observe automatic advancement after the success dwell, and optionally review/pause/skip. | Current page, accepted objective, unchanged lab data during navigation, and startup/restart behavior. |
+| Guided learning | Hear the instruction/purpose beside its minimal target prompt, perform the actual task, observe automatic advancement after the success dwell, and optionally review/pause/skip. | Current page, accepted objective, unchanged lab data during navigation, and startup/restart behavior. |
 | Menu mode | B/Y opens Balance/Analyze/Session; Quest models, available Capsense fingers, and rays replace gloves. Point/trigger, change tabs, and close. | Selected tab, clear button labels, physical interaction suspended, fresh approach on return. |
 | Movement | Left stick changes height; right stick walks within bounds. Open the menu or hold a mechanism, then return to neutral before retrying. | No movement while blocked, no automatic restart, and separate comfort observations. |
 | Readiness/interlock | Try to start before mounting, homing, or guarding; read the readiness message. | Rejected command and unchanged drive state. |
@@ -71,7 +71,7 @@ Keep test speed, probe position, and acquisition conditions consistent across ba
 | Shot | Content | Explanation |
 | --- | --- | --- |
 | Station overview | Workbench, rotor tray, guard, probe, physical console, and lower side analyzer with menu closed. | A guarded workflow with a defined measurement task. |
-| Guide orientation | Separate DO THIS/WHY card, current task, automatic progression, and optional A/X review. | Guidance refers to real controls and accepted outcomes without autoplaying the lab. |
+| Guide orientation | Minimal contextual prompt, spoken action/science, automatic progression, and optional A/X review. | Guidance refers to real controls and accepted outcomes without autoplaying the lab. |
 | Menu transition | B/Y, Quest controller geometry, controller-derived finger poses, selected tab, trigger selection, and return to gloves. | Pointing menus and nearby physical operation use distinct input modes. |
 | Direct controls | Fingertip press, nearby grip, rotor seating, and dial movement. | Controller-driven gloves and constrained interaction. |
 | Baseline | Stable acquisition and trace. | Tach-referenced peak displacement and phase. |

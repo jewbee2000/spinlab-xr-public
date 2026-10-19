@@ -1,5 +1,20 @@
 # Native validation record
 
+## Version 0.7.0 contextual voice guidance
+
+The operator confirmed that the v0.6.0 physical Load → HOME → Guard instructions advance correctly. This revision preserves that observer and replaces the large tutorial card and wrist legends. Each glove now carries only two 20 mm circular A/B or X/Y markers at the authored controller cap positions, with a fixed 46 mm outward clearance to sit above the procedural glove. Full tracked translation and rotation determine their centers; viewer-facing rotation affects only letter orientation.
+
+The tutorial draws a 0.24 × 0.10 m arrow/action/progress prompt beside the current target. Whole-card bounds and conservative stereo viewing-pyramid checks reject collisions and occlusion; full rotor and handle silhouettes are protected. If no nearby candidate is clear, the prompt hides and the target highlight/narration remain available. Geometry is evaluated after controller and height updates. Cached mesh descriptors retain CPU MultiMesh transforms while reading current visibility and world transforms, including carried rotors and moving guards. Dynamic analyzer traces stay inside a conservative monitor envelope.
+
+Fifteen bundled neural-voice clips explain work and scientific purpose offline: 309.28 seconds total, approximately 2.06 MB. Automatic progression observes real work during speech and waits for audio completion before its 1.5-second completion dwell. Menu/head/focus interruptions pause speech; review, restart and skip replace/cancel it. Right-stick click replays; Session offers persistent Voice ON/OFF and Replay Voice separately from motor sonification. The APK adds no internet or microphone permissions. Narration provenance, transcripts, hashes, pinned generator dependencies and upstream licenses are retained.
+
+All **16 native suites pass, 6,843 Windows assertions**. These cover unchanged numerical science, input/interlocks, all fifteen accepted work stages, minimal text, actual-world placement, cached/live geometry equivalence, blocked/stereo cases, end-of-frame guard/height updates, full-grip button anchors, all fifteen Ogg hashes/durations, and narration progression/pause/replay/mute/restart. The expected malformed tutorial ConfigFile diagnostic is injected by a passing fallback test. Audio-server test cleanup is allowed 0.6 seconds to release queued Ogg playback resources; the final suite exits without leaked-resource diagnostics. Browser tests (15), JavaScript syntax and portable packaging also pass.
+
+The final **v0.7.0 / versionCode 9 ARM64 APK** passes Android v2 signature verification and installs successfully over v0.6.0 with retained app data/signing identity. Package inspection confirms min SDK29 and target35. The 226 ZIP entries contain all fifteen imported voice streams, complete voice manifest and four retained license texts; tests, tool/model caches and private keys are absent. The manifest adds no Internet or microphone permission. APK size: **93,085,112 bytes**. SHA256: `6b778891366b121867592a5331b40596b07a9a66de92ec6ebbb70bb91c86dc0c`.
+
+Actual Quest startup logs confirm `SPINLAB_NATIVE_READY version=0.7.0 xr=true`, loading the 17.62-second first narration clip, and both runtime controller models. No script errors were present in the inspected startup log. This establishes launch and clip loading, not perceived voice quality. Physical confirmation of the new marker fit, prompt placement and voice clarity/volume remains pending. Desktop renders and passing tests do not establish stereo comfort or sustained Quest performance.
+
+
 Recorded 18 October 2026. This distinguishes software evidence from physical-headset acceptance.
 
 ## Version 0.6.0 controller visuals and balancing work instructions

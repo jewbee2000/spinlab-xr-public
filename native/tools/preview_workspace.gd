@@ -20,6 +20,7 @@ func _render_workspace() -> void:
 		return
 	root.size=Vector2i(1800,1200)
 	app=MainScene.instantiate()
+	app.narration_settings_path="";app.narration_enabled=false
 	app.tutorial_settings_path=""
 	app.tutorial_autostart=false
 	root.add_child(app)

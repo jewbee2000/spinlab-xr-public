@@ -25,6 +25,7 @@ func _run_tests() -> void:
 		_finish()
 		return
 	app = scene.instantiate()
+	app.narration_enabled=false;app.narration_settings_path=""
 	app.tutorial_settings_path = ""
 	app.tutorial_autostart = false
 	root.add_child(app)
@@ -90,7 +91,7 @@ func _test_world_controls() -> void:
 			_check(is_instance_valid(button.face) and is_instance_valid(button.text_label), "World button has a visible face and caption")
 			if button.get_meta("menu", false):
 				menu_count += 1
-		_check(menu_count == 8, "Eight visible commands in " + menu)
+		_check(menu_count == (10 if menu=="session" else 8), "Eight primary commands plus Session voice controls in " + menu)
 	var physical_actions: Dictionary = {}
 	var grabbable := false
 	for body in app.geometry.find_children("*", "StaticBody3D", true, false):

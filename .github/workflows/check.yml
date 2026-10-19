@@ -44,6 +44,8 @@ jobs:
         run: |
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_tutorial.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_tutorial_panel.gd
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_target_callout_placement.gd
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_tutorial_narrator.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_tutorial_app.gd
       - name: Verify operator workspace and navigation
         run: |

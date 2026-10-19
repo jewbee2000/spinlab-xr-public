@@ -21,3 +21,6 @@ native/addons/
 artifacts/quest-reports/
 artifacts/quest-*.txt
 artifacts/*.sha256
+
+__pycache__/
+*.pyc

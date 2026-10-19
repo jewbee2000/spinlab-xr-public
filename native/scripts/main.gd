@@ -12,7 +12,9 @@ const ControllerVisual = preload("res://scripts/virtual_controller.gd")
 const HandGuide = preload("res://scripts/hand_control_guide.gd")
 const CapsenseHand = preload("res://scripts/controller_capsense_hand.gd")
 const Navigation = preload("res://scripts/operator_navigation.gd")
-const APP_VERSION = "0.6.0"
+const Narrator = preload("res://scripts/tutorial_narrator.gd")
+const CalloutPlacement = preload("res://scripts/target_callout_placement.gd")
+const APP_VERSION = "0.7.0"
 const TEAL = Color("6ce5c9")
 const INK = Color("e6f1f5")
 const DIM = Color("9db7c6")
@@ -71,6 +73,12 @@ var tutorial_settings_path := "user://tutorial.cfg"
 var tutorial_autostart := true
 var tutorial
 var tutorial_panel
+var narrator
+var narration_enabled := true
+var narration_settings_path := "user://narration.cfg"
+var guide_placement: Dictionary = {}
+var guide_candidate := -1
+var guide_geometry_capture: Dictionary = {}
 var control_backplate: MeshInstance3D
 var lesson_navigation: Array = []
 var menu_open := false
@@ -106,6 +114,9 @@ func _ready() -> void:
 	_build_controls()
 	_build_instrument()
 	_build_dials()
+	narrator=Narrator.new();add_child(narrator)
+	narrator.configure("res://audio/tutorial/manifest.json",narration_settings_path)
+	if not narration_enabled:narrator.set_enabled(false)
 	_build_guide()
 	_build_desktop_hud()
 	_setup_sound()
@@ -256,6 +267,11 @@ func _rebuild_menu() -> void:
 		var color=Color("6b303b") if items[i][1]=="estop" else Color("285b4c") if items[i][1] in ["baseline","solve","verify"] else Color("244353")
 		var button=_button(controls,_wrap_text(caption,20),items[i][1],Vector3(-0.205+(i%2)*0.41,0.155-(i/2)*0.115,0.029),0.39,0.095,color)
 		button.set_meta("menu",true)
+	if tab=="session":
+		for extra in [["VOICE: "+("ON" if narrator.enabled else "OFF"),"tutorial:voice"],["REPLAY VOICE","tutorial:replay"]]:
+			var i=0 if extra[1]=="tutorial:voice" else 1
+			var button=_button(controls,extra[0],extra[1],Vector3(-0.205+i*0.41,-0.293,0.029),0.39,0.043)
+			button.set_meta("menu",true)
 	for key in menu_tab_buttons:
 		var button=menu_tab_buttons[key]
 		button.normal_color=Color("28735e") if key==tab else Color("244353")
@@ -329,56 +345,61 @@ func _build_instrument() -> void:
 	readouts["axis"]=_label(monitor,"",Vector3(0.035,-0.19,0.034),23,0.00060,DIM)
 	readouts["status"]=_label(monitor,"",Vector3(-0.84,-0.33,0.034),26,0.00060,DIM)
 	readouts["coach"]=_label(monitor,"",Vector3(-0.84,-0.405,0.034),25,0.00058,TEAL)
-	readouts["hands"]=_label(station,"B/Y MENU  ·  GUIDE ADVANCES AUTOMATICALLY  ·  X REVIEW\nLEFT STICK HEIGHT  ·  RIGHT STICK WALK",Vector3(-0.73,0.49,-0.89),23,0.00055,TEAL)
+	readouts["hands"]=_label(station,"B/Y MENU  ·  GUIDE ADVANCES AUTOMATICALLY  ·  X REVIEW\nLEFT STICK HEIGHT  ·  RIGHT STICK WALK / CLICK REPLAY",Vector3(-0.73,0.49,-0.89),23,0.00055,TEAL)
 
 func _build_guide() -> void:
 	tutorial_panel=LessonPanel.new();tutorial_panel.name="FloatingGuide";add_child(tutorial_panel);tutorial_panel.configure()
+	guide_geometry_capture=CalloutPlacement.capture_geometry(station,[chart])
 	guide_marker=MeshInstance3D.new();var mesh=SphereMesh.new();mesh.radius=0.012;mesh.height=0.024;guide_marker.mesh=mesh;guide_marker.material_override=_material(TEAL,true);add_child(guide_marker);guide_marker.visible=false
 	_place_guide()
 
+func _guide_target(view: Dictionary) -> Node3D:
+	var target: Node3D=geometry.physical_by_action.get(str(view.target),null)
+	match str(view.target):
+		"rotor","mount":target=geometry.rotor_grab
+		"guard":target=geometry.guard_handle
+		"dial:probe":target=geometry.probe_grab
+	return target
+
+func _guide_obstacles(opaque_only: bool = false) -> Dictionary:
+	# Geometry retains CPU MultiMesh transforms, so this is renderer-independent.
+	var result=CalloutPlacement.collect_world_aabbs(station,[],opaque_only)
+	return result
+
+func _guide_target_bounds(target: Node3D) -> AABB:
+	var bounds=target.global_transform*AABB(Vector3(-0.035,-0.035,-0.02),Vector3(0.07,0.07,0.04))
+	if target==geometry.rotor_grab:
+		for bound in CalloutPlacement.collect_world_aabbs(geometry.kit_rotor).bounds:bounds=bounds.merge(bound)
+	elif target==geometry.guard_handle:
+		for mesh in geometry.guard.find_children("*","MeshInstance3D",true,false):
+			if str(mesh.name).begins_with("GuardHandle") or str(mesh.name).begins_with("HandleBracket"):
+				bounds=bounds.merge(mesh.global_transform*mesh.mesh.get_aabb())
+	else:
+		for bound in CalloutPlacement.collect_world_aabbs(target).bounds:bounds=bounds.merge(bound)
+	return bounds
+
 func _place_guide() -> void:
-	if not is_instance_valid(tutorial_panel) or not is_instance_valid(camera):return
-	var forward=-camera.global_basis.z;forward.y=0
-	if forward.length_squared()<0.01:forward=Vector3.FORWARD
-	forward=forward.normalized()
-	var right=forward.cross(Vector3.UP)
-	# Prefer a near upper-right reading position. Test actual guard/probe mesh
-	# instances rather than accepting a disjoint card AABB:
-	# foreground hardware can still cross the text's sightlines.
-	var obstacles:Array[AABB]=[]
-	var renderers:Array=[]
-	if is_instance_valid(geometry):
-		for branch in [geometry.guard,geometry.probe]:renderers.append_array(branch.find_children("*","GeometryInstance3D",true,false))
-		for child in geometry.get_children():
-			if child is GeometryInstance3D and str(child.name).begins_with("Lift"):renderers.append(child)
-	for item in renderers:
-		if not item.is_visible_in_tree() or str(item.name).begins_with("GuardGlass"):continue
-		if str(item.name)=="GuardExtrusions":
-			# CPU construction bounds also work with the headless dummy renderer,
-			# where MultiMesh instance-transform readback returns identity.
-			for x in [-0.30,0.30]:
-				for z in [0.01,0.60]:obstacles.append((item.global_transform*AABB(Vector3(x-0.007,0.0,z-0.007),Vector3(0.014,0.40,0.014))).grow(0.008))
-				for y in [0.015,0.39]:obstacles.append((item.global_transform*AABB(Vector3(x-0.007,y-0.007,0.0),Vector3(0.014,0.014,0.60))).grow(0.008))
-			for z in [0.01,0.60]:
-				for y in [0.015,0.39]:obstacles.append((item.global_transform*AABB(Vector3(-0.30,y-0.007,z-0.007),Vector3(0.60,0.014,0.014))).grow(0.008))
-		elif item is MeshInstance3D and item.mesh:obstacles.append((item.global_transform*item.mesh.get_aabb()).grow(0.008))
-		elif item is MultiMeshInstance3D and item.multimesh and item.multimesh.mesh:
-			for i in item.multimesh.instance_count:obstacles.append((item.global_transform*item.multimesh.get_instance_transform(i)*item.multimesh.mesh.get_aabb()).grow(0.008))
-	if is_instance_valid(monitor):obstacles.append(monitor.global_transform*AABB(Vector3(-0.94,-0.54,-0.06),Vector3(1.88,1.08,0.12)))
-	for angle in [22.0,35.0,48.0,60.0,72.0,85.0]:
-		var azimuth=deg_to_rad(angle)
-		var direction=forward*cos(azimuth)+right*sin(azimuth)
-		tutorial_panel.global_position=camera.global_position+direction*1.15+Vector3(0,0.16,0)
-		tutorial_panel.look_at(camera.global_position,Vector3.UP,true)
-		var clear=true
-		for x in [-0.45,-0.225,0.0,0.225,0.45]:
-			for y in [-0.31,-0.155,0.0,0.155,0.31]:
-				var point=tutorial_panel.to_global(Vector3(x,y,0.008))
-				for obstacle in obstacles:
-					if obstacle.has_point(point) or obstacle.intersects_segment(camera.global_position,point)!=null:clear=false;break
-				if not clear:break
-			if not clear:break
-		if clear:return
+	if tutorial==null or not is_instance_valid(tutorial_panel) or not is_instance_valid(camera):return
+	if not input_focused or not _head_tracking_valid():
+		tutorial_panel.set_panel_active(false);return
+	var view=tutorial.view(_tutorial_context())
+	var target=_guide_target(view)
+	if not tutorial.active or menu_open or not is_instance_valid(target) or not target.is_visible_in_tree():
+		tutorial_panel.set_panel_active(false);return
+	var obstacles=CalloutPlacement.world_aabbs_from_capture(guide_geometry_capture)
+	# Dynamic chart traces remain inside this conservative monitor envelope.
+	var screen_bounds=monitor.global_transform*AABB(Vector3(-0.94,-0.54,-0.06),Vector3(1.88,1.08,0.12))
+	obstacles.bounds.append(screen_bounds);obstacles.opaque_bounds.append(screen_bounds)
+	if not obstacles.complete:
+		guide_placement={"visible":false,"reason":"incomplete geometry"}
+		tutorial_panel.set_panel_active(false);return
+	var target_bounds=_guide_target_bounds(target)
+	guide_placement=CalloutPlacement.find_placement(target.global_transform,camera.global_transform,obstacles.bounds,{"occluders":obstacles.opaque_bounds,"target_bounds":target_bounds,"preferred_candidate":guide_candidate,"floor_y":0.08})
+	if guide_placement.visible:
+		guide_candidate=guide_placement.candidate_index
+		tutorial_panel.global_transform=guide_placement.transform
+		tutorial_panel.set_target_world_position(target.global_position)
+	tutorial_panel.set_panel_active(bool(guide_placement.visible))
 
 func _build_dials() -> void:
 	for i in range(3):
@@ -450,7 +471,7 @@ func _action(command: String, input_kind: String="") -> void:
 		"new":
 			result=model.reset()
 			if result.ok:
-				_cancel_hand_interactions();active_plane=0;geometry.guard_preview=-1.0;saved_path=""
+				_cancel_hand_interactions();active_plane=0;geometry.guard_preview=-1.0;saved_path="";narrator.current_id=""
 		"lower":_cancel_hand_interactions();station.position.y=clampf(station.position.y-0.1,-0.5,0.3);result.message="Station lowered."
 		"raise":_cancel_hand_interactions();station.position.y=clampf(station.position.y+0.1,-0.5,0.3);result.message="Station raised."
 		"distance":_cancel_hand_interactions();station_distance=0.82 if station_distance<0.70 and station_distance>0.60 else 0.45 if station_distance>0.70 else 0.65;station.position.z=station_distance;result.message="Bench reach adjusted. Withdraw your hand before the next press."
@@ -480,25 +501,23 @@ func _tutorial_context() -> Dictionary:
 func _refresh_tutorial() -> void:
 	if tutorial==null or not is_instance_valid(tutorial_panel):return
 	var view=tutorial.view(_tutorial_context())
-	for entry in controllers:entry.control_guide.set_context(tutorial.active,bool(view.ready),int(view.index)==0,walk_enabled,entry.held!="",not grab_owners.is_empty())
+	view.display_state="Measuring" if model.running else "Analyzing" if model.processing else "Coasting" if model.rpm>0.1 else "Wait" if model.fault!="" or model.estop else ""
 	tutorial_panel.update_view(view)
-	tutorial_panel.set_panel_active(tutorial.active and not menu_open and (not xr_active or _head_tracking_valid()))
-	if view.id!=guide_step_id:
-		guide_step_id=view.id
-	var offset=tutorial_panel.global_position-camera.global_position
-	if tutorial.active and (offset.length()>2.6 or offset.normalized().dot(-camera.global_basis.z)<-0.1):_place_guide()
+	if view.id!=guide_step_id:guide_step_id=view.id;guide_candidate=-1
 	guide_marker.visible=false
 	for button in buttons:
 		if is_instance_valid(button):button.guide_highlight=false
-	if tutorial.active and not menu_open:
-		var target: Node3D=geometry.physical_by_action.get(str(view.target),null)
+	if tutorial.active and not menu_open and input_focused and _head_tracking_valid():
+		var target=_guide_target(view)
 		if target is LabButton:target.guide_highlight=true
-		match str(view.target):
-			"rotor","mount":target=geometry.rotor_grab
-			"guard":target=geometry.guard_handle
-			"dial:probe":target=geometry.probe_grab
-		if is_instance_valid(target) and target.is_visible_in_tree():
-			guide_marker.global_position=target.global_position+Vector3(0,0.08,0);guide_marker.visible=true
+		elif is_instance_valid(target) and target.is_visible_in_tree():
+			guide_marker.global_position=target.global_position+Vector3(0,0.055,0);guide_marker.visible=true
+	_place_guide()
+	_sync_narration()
+
+func _sync_narration() -> void:
+	if narrator==null or tutorial==null:return
+	narrator.sync(tutorial.view(_tutorial_context()),input_focused and not menu_open and _head_tracking_valid())
 
 func _tutorial_action(command: String) -> void:
 	var context=_tutorial_context()
@@ -517,8 +536,11 @@ func _tutorial_action(command: String) -> void:
 		"tutorial:back":status=tutorial.back().message
 		"tutorial:skip_step":status=tutorial.skip_step().message
 		"tutorial:next","tutorial:open_next":status=tutorial.next(context).get("message","")
+		"tutorial:voice":narrator.set_enabled(not narrator.enabled)
+		"tutorial:replay":narrator.replay()
 		"tutorial:touch":tutorial.observe(context,{"command":"tutorial:touch","ok":true})
 		_:return
+	if command=="tutorial:restart":narrator.current_id=""
 	if command in ["tutorial:restart","tutorial:toggle"]:_place_guide()
 	if menu_open:_rebuild_menu()
 	_update_ui()
@@ -663,6 +685,8 @@ func _controller_pressed(input_name: String, entry: Dictionary) -> void:
 		if tutorial.active:
 			_tutorial_action("tutorial:back" if str(entry.node.tracker)=="left_hand" else "tutorial:next")
 		return
+	if input_name=="primary_click" and not menu_open and str(entry.node.tracker)=="right_hand":
+		_tutorial_action("tutorial:replay");return
 	if input_name=="trigger_click" and menu_open and entry.get("tracked",false) and entry.get("aim_tracked",false) and entry.get("trigger_armed",false):
 		entry.trigger_armed=false
 		var ray=entry.ray
@@ -690,7 +714,7 @@ func _make_hand_entry(controller: Node3D, grip_node: Node3D) -> Dictionary:
 	return {"node":controller,"grip_node":grip_node,"hand":hand,"controller_visual":controller_visual,"control_guide":control_guide,"capsense_hand":capsense_hand,"reticle":reticle,"hint":hint,"held":"","held_target":null,"dial":"","raw":0.0,"contacts":{},"near":null,"tracked":false,"aim_tracked":false,"trigger_armed":false,"grip_down":false,"grip_armed":false,"by_started":-1,"by_handled":false,"ray":null,"beam":null}
 
 func _update_hand_guide(entry: Dictionary) -> void:
-	entry.control_guide.update_placement(entry.grip_node.global_position,camera.global_transform,input_focused and entry.get("tracked",false) and not menu_open and _head_tracking_valid())
+	entry.control_guide.update_placement(entry.grip_node.global_transform,camera.global_transform,input_focused and entry.get("tracked",false) and not menu_open and _head_tracking_valid())
 
 func _haptic(entry: Dictionary, amplitude: float=0.25) -> void:
 	if xr_active and entry.node is XRController3D:entry.node.trigger_haptic_pulse("haptic",0,amplitude,0.035,0)
@@ -866,6 +890,7 @@ func _apply_input_focus() -> void:
 	motion_armed=false;height_armed=false
 	guide_anchor_pending=true
 	_cancel_hand_interactions()
+	_sync_narration()
 	if not input_focused and is_instance_valid(model) and (model.running or model.processing):
 		model.stop()
 		status="Focus lost. Acquisition stopped; the simulated rotor coasts. Restart deliberately after returning."
@@ -954,7 +979,6 @@ func _update_navigation(delta: float) -> void:
 	var applied=allowed-current;applied.y=0
 	if applied.length_squared()>0.0000001:
 		rig.global_position+=applied
-		tutorial_panel.global_position+=applied
 		walk_distance_m+=applied.length();_reset_pokes()
 		tutorial.observe(_tutorial_context(),{"command":"walk","ok":true})
 
@@ -1015,12 +1039,15 @@ func _process(delta: float) -> void:
 			if menu_open:_place_menu()
 			else:_place_guide()
 	model.tick(minf(delta,0.05))
+	_sync_narration()
 	if tutorial.active and input_focused and not menu_open and (not xr_active or _head_tracking_valid()):
-		var progress=tutorial.tick(minf(delta,0.05),_tutorial_context())
+		var progress=tutorial.tick(0.0 if narrator.is_blocking() else minf(delta,0.05),_tutorial_context())
 		if progress.get("advanced",false) or progress.get("finished",false):_update_ui()
 	var t={"rpm":model.rpm,"time":model.time,"mounted":model.mounted,"guard_closed":model.guard_closed,"sensor_position_mm":model.sensor_position_mm,"masses":model.masses,"angles":model.angles,"mode":model.mode}
 	geometry.update_state(t)
 	if xr_active:_update_controllers(delta)
+	# Validate after held mechanisms and joystick height have their final pose.
+	_refresh_tutorial()
 	if xr_active:
 		perf_elapsed+=delta;perf_frames+=1;perf_max_delta=maxf(perf_max_delta,delta)
 		if perf_elapsed>=5.0:

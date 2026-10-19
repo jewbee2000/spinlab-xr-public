@@ -2,6 +2,16 @@
 
 Version 0.6.0 replaces approximate menu-controller geometry with device-oriented assets while retaining the working aim-ray and trigger-selection path. The physical station continues to use the articulated laboratory gloves and nearby interaction logic. B/Y switches presentation; geometry does not become a new input source.
 
+## Button letters on the gloves
+
+Hand mode displays only two small circular markers on each glove: **X/Y** on the left and **A/B** on the right. There are no per-hand instruction cards, headers, function descriptions, or backplates. Each circle is 20 mm across. The markers have no collision shapes and cannot select controls.
+
+Their centers come from the actual button-cap meshes in the pinned Quest 2 controller assets below, including the complete authored transform hierarchy. A fixed 46 mm offset along each cap's authored outward press normal clears the procedural glove's thumb pad. This is visual clearance above the hidden controller, not a replacement button location: projecting along that normal returns to the real cap center. Full grip translation and rotation carry the centers; head movement changes only the circles' facing and upright letters. Ordinary scene depth testing remains enabled, so mechanisms or a wrist turned away can occlude a marker.
+
+Desktop checks compare these centers with independently loaded controller meshes under translated and rotated grips, verify that moving the head cannot move a marker, and exercise focus/tracking/menu visibility in the actual application. Physical alignment and readability while wearing the Quest 2 remain headset acceptance checks.
+
+![Desktop glove preview with only the four physically anchored button letters](images/hand-controls.png)
+
 ## Device models and fallback
 
 The Godot OpenXR Vendors `OpenXRFbRenderModel` node retrieves the controller GLB exposed by the headset through `XR_FB_render_model`. The project enables `xr/openxr/extensions/meta/render_model`; the vendor exporter adds the required Meta render-model feature and permission. The model is attached in grip space. Load status and animation support are recorded in diagnostics; a static FB runtime model is not described as automatically animated. [Godot vendor node](https://godotvr.github.io/godot_openxr_vendors/api/class_openxrfbrendermodel.html).
