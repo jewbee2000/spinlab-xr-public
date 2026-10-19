@@ -50,7 +50,8 @@ func _ready() -> void:
 	_build_operating_console()
 	monitor_mount=Node3D.new()
 	monitor_mount.name="AnalyzerMonitorMount"
-	monitor_mount.position=Vector3(0,2.50,-2.2)
+	monitor_mount.position=Vector3(-1.55,1.45,-1.20)
+	monitor_mount.rotation.y=deg_to_rad(50.0)
 	add_child(monitor_mount)
 	_built = true
 	update_state({"rpm": 0.0, "time": 0.0, "mounted": false, "guard_closed": false,

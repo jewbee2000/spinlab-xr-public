@@ -71,7 +71,7 @@ func _test_console(geometry) -> void:
 	var emergency=geometry.physical_by_action.estop
 	_check(emergency.height_m>=0.10 and emergency.position.x<-0.65,"E-stop is large and isolated on the left edge")
 	_check(emergency.face.material_override.albedo_color.r>emergency.face.material_override.albedo_color.g*1.8,"E-stop has a distinct red cap")
-	_check(geometry.monitor_mount.position.is_equal_approx(Vector3(0,2.50,-2.2)),"Monitor anchor is behind the bench above the lifted guard")
+	_check(geometry.monitor_mount.position.is_equal_approx(Vector3(-1.55,1.45,-1.20)) and is_equal_approx(geometry.monitor_mount.rotation.y,deg_to_rad(50.0)),"Monitor anchor is low and left of the guard, yawed toward the operator")
 	_check(is_instance_valid(geometry.guard_handle) and is_instance_valid(geometry.rotor_grab) and is_instance_valid(geometry.probe_grab),"Existing nearby fixture mechanisms remain available")
 
 

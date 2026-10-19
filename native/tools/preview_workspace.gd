@@ -43,7 +43,7 @@ func _render_workspace() -> void:
 	# documentation overview. Keep the initial head pose as separate QA evidence.
 	app.camera.global_position=Vector3(0,1.6,0.65)
 	app.camera.fov=100
-	app.camera.look_at(app.station.to_global(Vector3(0,1.30,-1.4)))
+	app.camera.look_at(app.station.to_global(Vector3(-0.70,1.30,-1.4)))
 	await _capture("res://../docs/images/operator-workspace.png")
 	app.camera.fov=78
 	app.camera.global_position=Vector3(0,1.6,0.2)
@@ -59,10 +59,16 @@ func _render_workspace() -> void:
 	for i in app.tutorial.steps.size():
 		if app.tutorial.steps[i].id=="solve":app.tutorial.index=i
 	app._update_ui()
+	app._place_guide()
 	var guide_position: Vector3=app.tutorial_panel.global_position
 	app.camera.look_at(guide_position)
-	app.camera.fov=48
+	app.camera.fov=55
 	await _capture("res://../.local/floating-guide-workspace.png")
+	app.camera.global_position=Vector3(0,1.20,0.2)
+	app.camera.rotation=Vector3.ZERO
+	app._place_guide()
+	app.camera.look_at(app.tutorial_panel.global_position)
+	await _capture("res://../.local/floating-guide-seated.png")
 	print("WORKSPACE_GUIDE overflowed=",app.tutorial_panel.overflowed," id=",app.tutorial.steps[app.tutorial.index].id)
 	app.tutorial.skip()
 	app._update_ui()
@@ -70,10 +76,13 @@ func _render_workspace() -> void:
 	_prepare_verified_state()
 	app._update_ui()
 	_audit_monitor("verified")
-	app.camera.global_position=Vector3(0,2.50,-0.15)
+	app.camera.global_position=Vector3(0,1.60,0.20)
 	app.camera.look_at(app.monitor.global_position)
-	app.camera.fov=48
+	app.camera.fov=64
 	await _capture("res://../.local/analyzer-workspace.png")
+	app.camera.global_position=Vector3(0,1.20,0.20)
+	app.camera.look_at(app.monitor.global_position)
+	await _capture("res://../.local/analyzer-seated.png")
 	app.queue_free()
 	await process_frame
 	quit(0)

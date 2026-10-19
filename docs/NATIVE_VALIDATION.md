@@ -2,6 +2,22 @@
 
 Recorded 18 October 2026. This distinguishes software evidence from physical-headset acceptance.
 
+## Version 0.5.1 display and controller revision
+
+Headset feedback on v0.5 confirms that B/Y menu switching, pointing, and trigger selection work. The same feedback identifies upside-down controller lettering, a guide that is too small, and an analyzer that is too high. This revision changes display geometry and readability while preserving the working aim-pose and trigger path.
+
+Controller deck labels now use a proper rotation with outward normal −Z, glyph-up −Y, and right +X in OpenXR grip space. A/X sit nearer the wrist than B/Y; the side grip paddles mirror to the finger side. The model remains an original procedural approximation, not a measured Touch CAD fit. Independent pose checks and two rendered views cover handedness, glyph direction, representative head-relative poses, and preservation of the tracked grip transform.
+
+The floating guide grows from 0.72 × 0.48 m to **0.94 × 0.66 m**. Task text has 57% greater nominal em height and theory text 70%, with matching bright contrast. All 23 lessons retain their complete content, four-line task/theory reserves, state gates, and A/X controls. Nominal em and projected angles describe geometry; they do not establish perceived glyph size or readability through Quest lenses.
+
+The analyzer moves from a raised rear position to a lower left-side mount angled toward the operator. Its display frame, text columns, plots, floor stand, menu exclusion volume, and the guide's sightline placement are checked together. The floor foot remains fixed when workbench height changes. The guide stays separate from the menu and appears to the operator's right, with a lateral fallback when opaque hardware crosses its sampled sightlines. The six default seated/standing reading poses place it 48–60° right at about 1.16 m; reading the whole card requires a deliberate glance. Glass is excluded from the opaque-occlusion test; actual desktop views show no glass over the guide text. Closing a menu now preserves its settled world anchor.
+
+**6,025 Windows assertions pass** across twelve native suites: 129 science, 980 application commands, 68 direct contact, 475 hand geometry, 85 hand application, 260 tutorial state, 1,198 guide layout, 142 guide application, 1,291 navigation, 404 workcell geometry, 220 operator UI, and 773 controller pose checks. Browser syntax, 15 browser tests, and portable packaging pass. The expected corrupt-settings diagnostic still verifies fallback. Standing/seated guide/analyzer and two controller renders were reviewed; all initial/verified analyzer strings fit their allocated columns.
+
+The **v0.5.1/code6 ARM64 APK** builds, passes Android v2 signature verification, and installs successfully on the connected Quest 2 using the retained development key. Package-manager inspection confirms code6/name0.5.1, minimum SDK29 and target35. Its 163 ZIP entries exclude native tests and nested Android build resources. Size: **89,984,570 bytes**. SHA256: `bf9e50851382097e9f67925d3a8de2c83e7460d830a855d371cdbd6bc8c510d6`.
+
+Physical acceptance of the revised controller fit, guide readability, and monitor position remains pending; the v0.5 menu confirmation does not establish those new properties. First check those three changes in the headset, then continue the movement, full exercise/report, and sustained foreground checks below.
+
 ## Version 0.5 operator workspace
 
 User feedback before this revision described useful guard/knob hand interaction, cards obscuring the fixture, and failed index presses when other fingers were curled. Version 0.5 keeps the menu closed during normal operation, uses controller models/rays/trigger selection in the explicit B/Y menu, and restores hands when it closes. Four tabs show the selected category. Command buttons can be operated entirely through pointers; physical caps are optional. The rear landscape analyzer and separate read-only A/X floating guide replace the old foreground cards. Left-stick height has no duplicate menu buttons; right-stick walking moves the XR origin relative to horizontal head direction.

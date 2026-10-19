@@ -1,11 +1,26 @@
 class_name VirtualController
 extends Node3D
 ## Original controller visualization, not a vendor CAD model. Uses the OpenXR
-## grip frame: the handle follows +Z toward the lower grip; its controls/ring
-## sit toward -Z. The application supplies the separate aim ray and input.
+## grip frame: +Z runs toward the little finger; the thumb deck faces -Z.
+## On that deck, glyph up and the front/trigger direction are -Y, not +Y.
+## Khronos defines grip independently from the runtime's pointing/aim pose:
+## https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-grip-pose
+## Meta's input layout: left X/Y, right A/B. This original procedural model
+## approximates the physical casing; it is not a calibrated vendor CAD model.
+## https://developers.meta.com/vr/documentation/unreal/unreal-touch-controller/
+## The application supplies the separate aim ray and input, unchanged here.
+
+const DECK_OUTWARD := Vector3(0,0,-1)
+const DECK_GLYPH_UP := Vector3(0,-1,0)
+const HANDLE_TOWARD_LITTLE := Vector3(0,0,1)
+# Label3D's +Z is its front, +Y is glyph up. This proper rotation keeps
+# rightward text +X while sending both of those axes to the deck convention.
+const DECK_LABEL_BASIS := Basis(Vector3(1,0,0),Vector3(0,-1,0),Vector3(0,0,-1))
 
 var model_root: Node3D
 var button_labels: Array[Label3D] = []
+## Non-rendering, non-interactive coordinates for pose QA and future fitting.
+var pose_markers: Dictionary = {}
 var _side := "right_hand"
 var _built := false
 var _trigger: Node3D
@@ -35,6 +50,7 @@ func _build() -> void:
 	model_root.name="TrackedControllerVisual"
 	add_child(model_root)
 	button_labels.clear()
+	pose_markers.clear()
 	_materials.clear()
 	_material("shell",Color("18212b"),0.56)
 	_material("plate",Color("35414d"),0.43)
@@ -43,6 +59,10 @@ func _build() -> void:
 	_material("text",Color("e6f6f5"),0.8,true)
 	_material("accent",Color("65e6da"),0.5,true)
 	var mirror := -1.0 if _side=="left_hand" else 1.0
+	_marker("GripOrigin",Vector3.ZERO,Basis.IDENTITY)
+	_marker("ThumbDeckFrame",Vector3(0,-0.015,-0.073),DECK_LABEL_BASIS)
+	_marker("HandleTail",Vector3(0,0.008,0.089),Basis.IDENTITY)
+	_marker("IndexTriggerFront",Vector3(0,-0.055,-0.014),Basis.IDENTITY)
 	var handle := CapsuleMesh.new()
 	handle.radius=0.023;handle.height=0.125
 	handle.radial_segments=16;handle.rings=6
@@ -83,7 +103,8 @@ func _build() -> void:
 	trigger.scale=Vector3(0.022,0.011,0.019)
 	_grip=Node3D.new()
 	_grip.name="SideGripButton"
-	_grip.position=Vector3(mirror*0.022,0.006,0.022)
+	# The middle fingers squeeze the inward-facing paddle, opposite the palm.
+	_grip.position=Vector3(-mirror*0.022,0.006,0.022)
 	model_root.add_child(_grip)
 	var grip_shape := BoxMesh.new()
 	grip_shape.size=Vector3(0.006,0.026,0.037)
@@ -94,13 +115,19 @@ func _build() -> void:
 	_disc(model_root,"JoystickCap",0.012,0.005,stick_pos+Vector3(0,0,-0.012),"rubber")
 	var labels := ["X","Y"] if _side=="left_hand" else ["A","B"]
 	for index in range(2):
-		var pos := Vector3(mirror*(0.013+index*0.008),-0.030+index*0.024,-0.073)
+		# Primary A/X is nearer the wrist; B/Y is farther forward toward the
+		# index finger. Mirror only the lateral positions, never glyph scale.
+		var pos := Vector3(mirror*(0.013+index*0.008),0.008-index*0.024,-0.073)
 		_disc(model_root,"FaceButton"+str(index),0.0087,0.006,pos,"rubber")
 		var label=_label(labels[index],pos+Vector3(0,0,-0.0045),0.00025)
+		label.name="PrimaryLabel" if index==0 else "SecondaryLabel"
+		label.set_meta("component","primary" if index==0 else "secondary")
 		button_labels.append(label)
-	_disc(model_root,"SystemButton",0.006,0.004,Vector3(-mirror*0.020,0.006,-0.071),"rubber")
-	_label("≡",Vector3(-mirror*0.020,0.006,-0.074),0.00022)
-	_label("L" if _side=="left_hand" else "R",Vector3(0,0.021,-0.069),0.00027)
+	_disc(model_root,"SystemButton",0.006,0.004,Vector3(-mirror*0.020,0.022,-0.071),"rubber")
+	var system_label=_label("≡" if _side=="left_hand" else "○",Vector3(-mirror*0.020,0.022,-0.074),0.00022)
+	system_label.name="MenuLabel" if _side=="left_hand" else "SystemLabel"
+	var side_label=_label("L" if _side=="left_hand" else "R",Vector3(0,0.033,-0.069),0.00027)
+	side_label.name="HandednessLabel"
 	var led_shape := BoxMesh.new();led_shape.size=Vector3(0.012,0.0025,0.002)
 	var led=_mesh(model_root,led_shape,"accent","ControllerStatusLED")
 	led.position=Vector3(0,0.012,-0.071)
@@ -114,7 +141,7 @@ func set_pose(trigger: float, grip: float, _thumb_touch: bool=false, _holding: b
 	if not _built:return
 	_trigger.position.y=-0.044+_trigger_value*0.007
 	_trigger.rotation.x=-_trigger_value*0.20
-	_grip.position.x=(-1.0 if _side=="left_hand" else 1.0)*(0.022-_grip_value*0.003)
+	_grip.position.x=(1.0 if _side=="left_hand" else -1.0)*(0.022-_grip_value*0.003)
 
 
 func _material(key: String, color: Color, roughness: float, unshaded: bool=false) -> void:
@@ -148,8 +175,18 @@ func _disc(parent: Node3D, node_name: String, radius: float, height: float, pos:
 
 func _label(text: String, pos: Vector3, pixel_size: float) -> Label3D:
 	var label := Label3D.new()
-	label.text=text;label.position=pos;label.rotation.y=PI
+	label.text=text;label.position=pos;label.basis=DECK_LABEL_BASIS
 	label.font_size=28;label.pixel_size=pixel_size;label.modulate=Color("e6f6f5")
 	label.outline_size=0;label.shaded=false
+	label.double_sided=false
 	model_root.add_child(label)
 	return label
+
+
+func _marker(node_name: String, position_m: Vector3, frame: Basis) -> void:
+	var marker:=Marker3D.new()
+	marker.name=node_name
+	marker.transform=Transform3D(frame,position_m)
+	marker.set_meta("pose_coordinate",true)
+	model_root.add_child(marker)
+	pose_markers[node_name]=marker

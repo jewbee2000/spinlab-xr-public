@@ -317,8 +317,58 @@ func _test_menu_placement() -> void:
 			app._set_menu_open(true)
 			_check(app.menu_open and app.controls.visible, "Menu opens from each tested bench-perimeter position")
 			_check(app._menu_placement_clear(), "Menu avoids fixture/monitor: station height=" + str(height) + ", head=" + str(app.camera.global_position) + ", menu=" + str(app.controls.global_position))
-		_check(app.monitor.global_position.y - 0.53 > app.station.global_position.y + 1.95, "Actual analyzer frame bottom remains above the main fixture volume")
+		_check(app.monitor.position.is_equal_approx(Vector3(-1.55,1.45,-1.20)), "Analyzer is mounted low and left rather than above the guard")
+		_check(is_equal_approx(app.get_node("AnalyzerFloorStand/AnalyzerStandFoot").global_position.y,0.0125), "Analyzer stand foot stays on the floor while bench height changes")
 	_fresh()
+	var obstacles: Array[AABB] = _reading_obstacles()
+	for eye in [1.2,1.6,1.75]:
+		for z in [0.0,0.2]:
+			app.camera.global_transform=Transform3D(Basis.IDENTITY,Vector3(0,eye,z))
+			_check(app.monitor.global_basis.z.dot((app.camera.global_position-app.monitor.global_position).normalized())>0.85,"Monitor front +Z faces seated/standing operator")
+			_check(_surface_visible(app.monitor,Vector2(0.88,0.48),obstacles),"Lower side screen is visible past the OPEN guard from default seated/standing head")
+			app._place_guide()
+			var with_monitor: Array[AABB]=obstacles.duplicate()
+			with_monitor.append(app.monitor.global_transform*AABB(Vector3(-0.94,-0.54,-0.06),Vector3(1.88,1.08,0.12)))
+			_check(_surface_visible(app.tutorial_panel,Vector2(0.45,0.31),with_monitor),"Enlarged guide text sightlines clear open guard/probe/side monitor")
+			var offset:Vector3=app.tutorial_panel.global_position-app.camera.global_position
+			print("READING_PLACEMENT eye=",eye," z=",z," guide=",app.tutorial_panel.global_position," azimuth=",rad_to_deg(atan2(offset.x,-offset.z))," range=",offset.length())
+	app.camera.global_transform=Transform3D(Basis.IDENTITY,Vector3(0,1.6,0.2))
+	app._place_guide()
+	var reading_anchor:Transform3D=app.tutorial_panel.global_transform
+	app.camera.look_at(app.tutorial_panel.global_position)
+	app._set_menu_open(true)
+	app._set_menu_open(false)
+	_check(app.tutorial_panel.global_transform.is_equal_approx(reading_anchor),"Closing menu while looking at guide preserves its readable world anchor")
+	_fresh()
+
+func _reading_obstacles() -> Array[AABB]:
+	var result:Array[AABB]=[]
+	var meshes:Array=[]
+	for branch in [app.geometry.guard,app.geometry.probe]:meshes.append_array(branch.find_children("*","GeometryInstance3D",true,false))
+	for child in app.geometry.get_children():
+		if child is GeometryInstance3D and str(child.name).begins_with("Lift"):meshes.append(child)
+	for item in meshes:
+		if not item.is_visible_in_tree() or str(item.name).begins_with("GuardGlass"):continue
+		if str(item.name)=="GuardExtrusions":
+			for x in [-0.30,0.30]:
+				for z in [0.01,0.60]:result.append(item.global_transform*AABB(Vector3(x-0.007,0,z-0.007),Vector3(0.014,0.40,0.014)))
+				for y in [0.015,0.39]:result.append(item.global_transform*AABB(Vector3(x-0.007,y-0.007,0),Vector3(0.014,0.014,0.60)))
+			for z in [0.01,0.60]:
+				for y in [0.015,0.39]:result.append(item.global_transform*AABB(Vector3(-0.30,y-0.007,z-0.007),Vector3(0.60,0.014,0.014)))
+		elif item is MeshInstance3D and item.mesh:result.append(item.global_transform*item.mesh.get_aabb())
+		elif item is MultiMeshInstance3D and item.multimesh and item.multimesh.mesh:
+			for index in item.multimesh.instance_count:result.append(item.global_transform*item.multimesh.get_instance_transform(index)*item.multimesh.mesh.get_aabb())
+	return result
+
+func _surface_visible(surface:Node3D,half:Vector2,obstacles:Array[AABB]) -> bool:
+	for x in [-half.x,-half.x*0.5,0.0,half.x*0.5,half.x]:
+		for y in [-half.y,-half.y*0.5,0.0,half.y*0.5,half.y]:
+			var point:Vector3=surface.to_global(Vector3(x,y,0.034 if surface==app.monitor else 0.008))
+			for obstacle in obstacles:
+				if obstacle.intersects_segment(app.camera.global_position,point)!=null:
+					print("READING_OBSTRUCTION surface=",surface.name," eye=",app.camera.global_position," point=",point," box=",obstacle)
+					return false
+	return true
 
 func _poke(entry: Dictionary, button, offset: float) -> void:
 	app.frame_latches.clear()

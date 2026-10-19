@@ -10,7 +10,7 @@ const Tutorial = preload("res://scripts/lab_tutorial.gd")
 const LessonPanel = preload("res://scripts/tutorial_panel.gd")
 const ControllerVisual = preload("res://scripts/virtual_controller.gd")
 const Navigation = preload("res://scripts/operator_navigation.gd")
-const APP_VERSION = "0.5.0"
+const APP_VERSION = "0.5.1"
 const TEAL = Color("6ce5c9")
 const INK = Color("e6f1f5")
 const DIM = Color("9db7c6")
@@ -276,7 +276,6 @@ func _set_menu_open(open: bool) -> void:
 		entry.controller_visual.visible=entry.tracked and open
 		if is_instance_valid(entry.beam):entry.beam.visible=false
 	if open:_place_menu()
-	else:_place_guide()
 	_sync_menu_visibility();_update_ui()
 
 func _place_menu() -> void:
@@ -295,28 +294,38 @@ func _menu_placement_clear() -> bool:
 	for x in [-0.46,0.46]:
 		for y in [-0.44,0.40]:
 			for z in [-0.03,0.04]:bounds=bounds.expand(controls.to_global(Vector3(x,y,z)))
-	for obstacle in [AABB(Vector3(-0.40,0.93,-1.78),Vector3(0.80,1.02,0.82)),AABB(Vector3(0.30,0.89,-1.65),Vector3(0.58,0.40,0.48)),AABB(Vector3(-0.86,0.59,-1.91),Vector3(1.72,0.32,1.12)),AABB(Vector3(-0.36,0.80,-0.91),Vector3(0.72,0.31,0.16)),AABB(Vector3(-0.94,1.97,-2.25),Vector3(1.88,1.07,0.12))]:
-		if bounds.intersects(AABB(station.to_global(obstacle.position),obstacle.size)):return false
+	for obstacle in [AABB(Vector3(-0.40,0.93,-1.78),Vector3(0.80,1.02,0.82)),AABB(Vector3(0.30,0.89,-1.65),Vector3(0.58,0.40,0.48)),AABB(Vector3(-0.86,0.59,-1.91),Vector3(1.72,0.32,1.12)),AABB(Vector3(-0.36,0.80,-0.91),Vector3(0.72,0.31,0.16))]:
+		if bounds.intersects(station.global_transform*obstacle):return false
+	# Transform all eight display corners: an untranslated rear-screen AABB is
+	# no longer valid for the yawed left-side monitor.
+	if is_instance_valid(monitor) and bounds.intersects(monitor.global_transform*AABB(Vector3(-0.94,-0.54,-0.06),Vector3(1.88,1.08,0.12))):return false
 	return true
 
 func _build_instrument() -> void:
-	monitor=Node3D.new();monitor.name="AnalyzerMonitor";monitor.position=Vector3(0,2.50,-2.2);station.add_child(monitor)
+	monitor=Node3D.new();monitor.name="AnalyzerMonitor";station.add_child(monitor)
+	monitor.transform=geometry.monitor_mount.transform
 	_box(monitor,Vector3(1.86,1.06,0.065),Vector3(0,0,-0.02),Color("0b1118"))
 	_box(monitor,Vector3(1.78,0.98,0.008),Vector3(0,0,0.019),Color("10232f"))
-	_box(monitor,Vector3(0.10,1.98,0.08),Vector3(0,-1.50,-0.08),Color("354b58"))
-	_box(monitor,Vector3(0.55,0.025,0.33),Vector3(0,-2.47,-0.06),Color("1c303d"))
-	_label(monitor,"SPINLAB  /  TACH-SYNCHRONOUS ANALYZER",Vector3(-0.84,0.45,0.034),30,0.00070,TEAL)
-	readouts["speed"]=_label(monitor,"0 RPM",Vector3(-0.84,0.35,0.034),48,0.00075)
-	readouts["amplitude"]=_label(monitor,"",Vector3(-0.84,0.23,0.034),30,0.00066)
-	readouts["phase"]=_label(monitor,"",Vector3(-0.84,0.15,0.034),24,0.00060,DIM)
-	readouts["quality"]=_label(monitor,"",Vector3(-0.84,0.04,0.034),24,0.00059,DIM)
-	readouts["solution"]=_label(monitor,"",Vector3(-0.84,-0.08,0.034),24,0.00057)
-	readouts["result"]=_label(monitor,"",Vector3(-0.84,-0.21,0.034),25,0.00060,TEAL)
-	readouts["chart"]=_label(monitor,"",Vector3(0.03,0.34,0.034),23,0.00055,TEAL)
+	# A floor-fixed base with overlapping telescopic sections keeps its foot on
+	# the floor while station height changes move the screen/bracket only.
+	var floor_stand=Node3D.new();floor_stand.name="AnalyzerFloorStand";add_child(floor_stand)
+	var base=station.to_global(Vector3(monitor.position.x,0,monitor.position.z));base.y=0
+	floor_stand.global_transform=Transform3D(Basis(Vector3.UP,monitor.rotation.y),base)
+	_box(floor_stand,Vector3(0.10,0.98,0.08),Vector3(0,0.515,-0.08),Color("354b58"))
+	var foot=_box(floor_stand,Vector3(0.55,0.025,0.33),Vector3(0,0.0125,-0.06),Color("1c303d"));foot.name="AnalyzerStandFoot"
+	_box(monitor,Vector3(0.074,0.62,0.06),Vector3(0,-0.57,-0.08),Color("536c7b"))
+	_label(monitor,"SPINLAB  /  TACH-SYNCHRONOUS ANALYZER",Vector3(-0.84,0.45,0.034),30,0.00074,TEAL)
+	readouts["speed"]=_label(monitor,"0 RPM",Vector3(-0.84,0.35,0.034),50,0.00080)
+	readouts["amplitude"]=_label(monitor,"",Vector3(-0.84,0.23,0.034),32,0.00072)
+	readouts["phase"]=_label(monitor,"",Vector3(-0.84,0.15,0.034),26,0.00065,DIM)
+	readouts["quality"]=_label(monitor,"",Vector3(-0.84,0.04,0.034),28,0.00065,DIM)
+	readouts["solution"]=_label(monitor,"",Vector3(-0.84,-0.08,0.034),28,0.00066)
+	readouts["result"]=_label(monitor,"",Vector3(-0.84,-0.21,0.034),28,0.00066,TEAL)
+	readouts["chart"]=_label(monitor,"",Vector3(0.03,0.34,0.034),24,0.00062,TEAL)
 	chart=Chart3D.new();chart.width_m=0.76;chart.height_m=0.43;chart.position=Vector3(0.035,-0.16,0.034);monitor.add_child(chart)
-	readouts["axis"]=_label(monitor,"",Vector3(0.035,-0.19,0.034),20,0.00054,DIM)
-	readouts["status"]=_label(monitor,"",Vector3(-0.84,-0.33,0.034),23,0.00055,DIM)
-	readouts["coach"]=_label(monitor,"",Vector3(-0.84,-0.405,0.034),22,0.00053,TEAL)
+	readouts["axis"]=_label(monitor,"",Vector3(0.035,-0.19,0.034),23,0.00060,DIM)
+	readouts["status"]=_label(monitor,"",Vector3(-0.84,-0.33,0.034),26,0.00060,DIM)
+	readouts["coach"]=_label(monitor,"",Vector3(-0.84,-0.405,0.034),25,0.00058,TEAL)
 	readouts["hands"]=_label(station,"B/Y MENU  ·  A GUIDE NEXT  ·  X BACK\nLEFT STICK HEIGHT  ·  RIGHT STICK WALK",Vector3(-0.73,0.49,-0.89),23,0.00055,TEAL)
 
 func _build_guide() -> void:
@@ -330,8 +339,43 @@ func _place_guide() -> void:
 	if forward.length_squared()<0.01:forward=Vector3.FORWARD
 	forward=forward.normalized()
 	var right=forward.cross(Vector3.UP)
-	tutorial_panel.global_position=camera.global_position+forward*1.25-right*0.78+Vector3(0,0.28,0)
-	tutorial_panel.look_at(camera.global_position,Vector3.UP,true)
+	# Prefer a near upper-right reading position. Test actual guard/probe mesh
+	# instances rather than accepting a disjoint card AABB:
+	# foreground hardware can still cross the text's sightlines.
+	var obstacles:Array[AABB]=[]
+	var renderers:Array=[]
+	if is_instance_valid(geometry):
+		for branch in [geometry.guard,geometry.probe]:renderers.append_array(branch.find_children("*","GeometryInstance3D",true,false))
+		for child in geometry.get_children():
+			if child is GeometryInstance3D and str(child.name).begins_with("Lift"):renderers.append(child)
+	for item in renderers:
+		if not item.is_visible_in_tree() or str(item.name).begins_with("GuardGlass"):continue
+		if str(item.name)=="GuardExtrusions":
+			# CPU construction bounds also work with the headless dummy renderer,
+			# where MultiMesh instance-transform readback returns identity.
+			for x in [-0.30,0.30]:
+				for z in [0.01,0.60]:obstacles.append((item.global_transform*AABB(Vector3(x-0.007,0.0,z-0.007),Vector3(0.014,0.40,0.014))).grow(0.008))
+				for y in [0.015,0.39]:obstacles.append((item.global_transform*AABB(Vector3(x-0.007,y-0.007,0.0),Vector3(0.014,0.014,0.60))).grow(0.008))
+			for z in [0.01,0.60]:
+				for y in [0.015,0.39]:obstacles.append((item.global_transform*AABB(Vector3(-0.30,y-0.007,z-0.007),Vector3(0.60,0.014,0.014))).grow(0.008))
+		elif item is MeshInstance3D and item.mesh:obstacles.append((item.global_transform*item.mesh.get_aabb()).grow(0.008))
+		elif item is MultiMeshInstance3D and item.multimesh and item.multimesh.mesh:
+			for i in item.multimesh.instance_count:obstacles.append((item.global_transform*item.multimesh.get_instance_transform(i)*item.multimesh.mesh.get_aabb()).grow(0.008))
+	if is_instance_valid(monitor):obstacles.append(monitor.global_transform*AABB(Vector3(-0.94,-0.54,-0.06),Vector3(1.88,1.08,0.12)))
+	for angle in [22.0,35.0,48.0,60.0,72.0,85.0]:
+		var azimuth=deg_to_rad(angle)
+		var direction=forward*cos(azimuth)+right*sin(azimuth)
+		tutorial_panel.global_position=camera.global_position+direction*1.15+Vector3(0,0.16,0)
+		tutorial_panel.look_at(camera.global_position,Vector3.UP,true)
+		var clear=true
+		for x in [-0.45,-0.225,0.0,0.225,0.45]:
+			for y in [-0.31,-0.155,0.0,0.155,0.31]:
+				var point=tutorial_panel.to_global(Vector3(x,y,0.008))
+				for obstacle in obstacles:
+					if obstacle.has_point(point) or obstacle.intersects_segment(camera.global_position,point)!=null:clear=false;break
+				if not clear:break
+			if not clear:break
+		if clear:return
 
 func _build_dials() -> void:
 	for i in range(3):
