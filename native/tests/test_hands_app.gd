@@ -42,6 +42,7 @@ func _run_tests() -> void:
 		_finish()
 		return
 	app = scene.instantiate()
+	app.narration_enabled=false;app.narration_settings_path=""
 	app.tutorial_settings_path = ""
 	app.tutorial_autostart = false
 	root.add_child(app)

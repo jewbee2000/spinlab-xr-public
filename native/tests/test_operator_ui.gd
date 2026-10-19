@@ -8,6 +8,7 @@ class SilentOperator extends "res://scripts/main.gd":
 	## The production scene has no children beyond this same main script.
 	var simulate_save_failure: bool = false
 	func _setup_sound() -> void:pass
+	func _init() -> void:narration_enabled=false;narration_settings_path=""
 	func _save_report() -> void:
 		if simulate_save_failure:
 			status = "Report could not be written: injected I/O failure."
@@ -64,6 +65,7 @@ func _near(actual: Vector3, expected: Vector3, description: String) -> void:
 
 func _run() -> void:
 	app = SilentOperator.new()
+	app.narration_enabled=false;app.narration_settings_path=""
 	app.tutorial_settings_path = ""
 	root.add_child(app)
 	app.set_process(false)
@@ -93,6 +95,7 @@ func _run() -> void:
 	_test_height_and_room()
 	_test_anchor_recovery()
 	_test_hand_control_guides()
+	_test_callout_after_controller_poll()
 	print("OPERATOR UI TESTS: %d checks, %d failures" % [checks, failures])
 	app._cancel_hand_interactions()
 	app.controllers.clear()
@@ -320,25 +323,15 @@ func _test_menu_placement() -> void:
 		_check(app.monitor.position.is_equal_approx(Vector3(-1.55,1.45,-1.20)), "Analyzer is mounted low and left rather than above the guard")
 		_check(is_equal_approx(app.get_node("AnalyzerFloorStand/AnalyzerStandFoot").global_position.y,0.0125), "Analyzer stand foot stays on the floor while bench height changes")
 	_fresh()
-	var obstacles: Array[AABB] = _reading_obstacles()
+	app.tutorial.start(app._tutorial_context())
 	for eye in [1.2,1.6,1.75]:
 		for z in [0.0,0.2]:
 			app.camera.global_transform=Transform3D(Basis.IDENTITY,Vector3(0,eye,z))
-			_check(app.monitor.global_basis.z.dot((app.camera.global_position-app.monitor.global_position).normalized())>0.85,"Monitor front +Z faces seated/standing operator")
-			_check(_surface_visible(app.monitor,Vector2(0.88,0.48),obstacles),"Lower side screen is visible past the OPEN guard from default seated/standing head")
-			app._place_guide()
-			var with_monitor: Array[AABB]=obstacles.duplicate()
-			with_monitor.append(app.monitor.global_transform*AABB(Vector3(-0.94,-0.54,-0.06),Vector3(1.88,1.08,0.12)))
-			_check(_surface_visible(app.tutorial_panel,Vector2(0.45,0.31),with_monitor),"Enlarged guide text sightlines clear open guard/probe/side monitor")
-			var offset:Vector3=app.tutorial_panel.global_position-app.camera.global_position
-			print("READING_PLACEMENT eye=",eye," z=",z," guide=",app.tutorial_panel.global_position," azimuth=",rad_to_deg(atan2(offset.x,-offset.z))," range=",offset.length())
-	app.camera.global_transform=Transform3D(Basis.IDENTITY,Vector3(0,1.6,0.2))
-	app._place_guide()
-	var reading_anchor:Transform3D=app.tutorial_panel.global_transform
-	app.camera.look_at(app.tutorial_panel.global_position)
-	app._set_menu_open(true)
-	app._set_menu_open(false)
-	_check(app.tutorial_panel.global_transform.is_equal_approx(reading_anchor),"Closing menu while looking at guide preserves its readable world anchor")
+			app._refresh_tutorial()
+			_check(app.guide_placement.visible,"Rotor prompt available beside target for default seated/standing views")
+			if app.guide_placement.visible:
+				_check(app.tutorial_panel.global_position.distance_to(app.geometry.rotor_grab.global_position)<0.49,"Prompt remains adjacent to rotor, independent of head")
+				for bound in app._guide_obstacles().bounds:_check(not app.guide_placement.bounds.intersects(bound),"Whole prompt clears actual station geometry")
 	_fresh()
 
 func _reading_obstacles() -> Array[AABB]:
@@ -417,7 +410,7 @@ func _test_guide_controls() -> void:
 	for frame in range(40):app._process(0.05)
 	_check(app.tutorial.index==1,"Confirmed rotor placement automatically advances to Home without pressing A")
 	_check(app.geometry.physical_by_action.home.guide_highlight,"Work instruction highlights physical HOME rather than a menu tab")
-	_check(app.tutorial_panel.global_transform.is_equal_approx(anchored),"Automatic progression preserves the guide world anchor")
+	_check(app.tutorial_panel.global_position.distance_to(app.geometry.physical_by_action.home.global_position)<0.49,"Automatic progression moves the prompt to physical HOME")
 	app._controller_pressed("ax_button",left)
 	_check(app.tutorial.view(app._tutorial_context()).get("reviewing",false),"Left X reviews earlier work instructions without operating the lab")
 	var view_before: Dictionary=app.tutorial.view(app._tutorial_context())
@@ -449,7 +442,7 @@ func _test_navigation() -> void:
 	_near(app.rig.global_position, origin + expected, "Right stick moves the actual XROrigin horizontally")
 	_near(app.camera.position, local_camera, "Artificial movement preserves the camera's room-scale local offset")
 	_near(app.camera.global_position, head + expected, "Actual tracked head moves with the origin")
-	_near(app.tutorial_panel.global_position, guide + expected, "Floating guide follows artificial movement without drifting away")
+	_near(app.tutorial_panel.global_position, guide, "Target-adjacent prompt is not translated with the walking origin")
 	_check(absf(app.walk_distance_m - expected.length()) < 0.00001, "Report distance uses allowed actual displacement")
 	right.node.stick = Vector2.ZERO
 	app._update_controllers(DT)
@@ -537,13 +530,13 @@ func _test_anchor_recovery() -> void:
 	_check(app.guide_anchor_pending,"Untracked startup retains a pending placement")
 	app.head_tracking_override=true
 	app._process(DT)
-	_check(not app.guide_anchor_pending and app.tutorial_panel.global_position.y>app.camera.global_position.y,"First tracked head pose anchors the guide at reading height")
+	_check(not app.guide_anchor_pending,"First tracked head pose releases pending target placement")
 	app._set_xr_focus(false)
 	app._process(DT)
 	app.camera.position+=Vector3(0.4,0,0)
 	app._set_xr_focus(true)
 	app._process(DT)
-	_check(not app.guide_anchor_pending and app.tutorial_panel.global_position.distance_to(app.camera.global_position)<1.6,"Focus return anchors guidance around the current head pose")
+	_check(not app.guide_anchor_pending,"Focus return recalculates target guidance with the current tracked head")
 
 func _test_hand_control_guides() -> void:
 	_fresh()
@@ -551,59 +544,102 @@ func _test_hand_control_guides() -> void:
 	right.grip_node.global_position=Vector3(0.55,1.25,-0.30)
 	app._update_controllers(DT)
 	app._refresh_tutorial()
-	_check(_hand_legend_text(right).contains("off"),"Inactive tutorial marks the right-hand guide action off")
-	app.tutorial.start(app._tutorial_context())
-	app.tutorial.index=0
-	app._refresh_tutorial()
-	_check(_hand_legend_text(right).contains("wait"),"Unmet tutorial objective marks Guide next as waiting")
 	for entry in [left,right]:
-		_check(entry.hand.visible and entry.control_guide.visible,"Tracked hands show a button/function guide beside each glove")
-		_check(entry.control_guide.get_parent()==entry.grip_node,"Guide lifetime and artificial movement follow its tracked grip")
-		_check(entry.control_guide.find_children("*","CollisionObject3D",true,false).is_empty(),"Hand legend cannot intercept physical or menu input")
+		_check(entry.hand.visible and entry.control_guide.visible,"Tracked gloves show their two physical button letters")
+		_check(entry.control_guide.get_parent()==entry.grip_node,"Marker lifetime follows its tracked grip")
+		_check(entry.control_guide.labels.size()==2 and entry.control_guide.markers.size()==2,"Hand mode contains exactly two circular hardware markers")
+		var expected: Array=["X","Y"] if entry==left else ["A","B"]
+		_check([entry.control_guide.labels.primary.text,entry.control_guide.labels.secondary.text]==expected,"Each glove identifies its real handed controller buttons")
+		_check(entry.control_guide.find_children("*","CollisionObject3D",true,false).is_empty(),"Letter markers cannot intercept physical or menu input")
 	var hand_before: Vector3=right.grip_node.global_position
-	var guide_before: Vector3=right.control_guide.global_position
+	var marker_before: Vector3=right.control_guide.markers.primary.global_position
 	right.grip_node.global_position+=Vector3(0.06,0.04,0)
 	app._update_controllers(DT)
-	_check(right.control_guide.global_position.distance_to(guide_before)>0.02,"Legend follows hand translation rather than becoming a floating station card")
-	_check(right.grip_node.global_position.distance_to(hand_before)>0.05,"Legend update does not change the tracked hand pose")
+	_near(right.control_guide.markers.primary.global_position-marker_before,Vector3(0.06,0.04,0),"Button centers follow exact grip translation")
+	_check(right.grip_node.global_position.distance_to(hand_before)>0.05,"Marker updates do not change the tracked hand pose")
+	right.grip_node.global_basis=Basis.from_euler(Vector3(0.4,-0.3,0.5))
+	app._update_controllers(DT)
+	var anchor: Dictionary=right.control_guide.anchors.primary
+	var expected_center: Vector3=right.grip_node.global_transform*(anchor.center+anchor.normal*right.control_guide.CAP_NORMAL_OFFSET_M)
+	_near(right.control_guide.markers.primary.global_position,expected_center,"Root supplies full grip rotation to hardware button anchors")
+	var center_before_head_move: Vector3=right.control_guide.markers.primary.global_position
+	app.camera.global_position+=Vector3(0.12,0.06,0.03)
+	app._update_controllers(DT)
+	_near(right.control_guide.markers.primary.global_position,center_before_head_move,"Head movement changes letter facing without relocating a physical button")
 	app._set_menu_open(true)
-	_check(not left.control_guide.visible and not right.control_guide.visible,"Opening pointer menu immediately hides both hand legends")
+	_check(not left.control_guide.visible and not right.control_guide.visible,"Opening pointer menu immediately hides glove markers")
 	app._set_menu_open(false)
-	_check(left.control_guide.visible and right.control_guide.visible,"Closing menu restores both nearby tracked hand legends")
+	_check(left.control_guide.visible and right.control_guide.visible,"Closing menu restores tracked glove markers")
 	right.grip_node.tracking=false
 	app._update_controllers(DT)
-	_check(left.control_guide.visible and not right.control_guide.visible,"Lost grip tracking hides only that hand legend")
+	_check(left.control_guide.visible and not right.control_guide.visible,"Lost grip tracking hides only that glove's markers")
 	right.grip_node.tracking=true
 	right.node.tracking=false
 	app._update_controllers(DT)
-	_check(right.control_guide.visible,"Hands legend depends on grip tracking and does not require menu aim tracking")
+	_check(right.control_guide.visible,"Glove markers require grip tracking without requiring menu aim tracking")
 	app._set_xr_focus(false)
-	_check(not left.control_guide.visible and not right.control_guide.visible,"Focus loss immediately hides both hand legends")
+	_check(not left.control_guide.visible and not right.control_guide.visible,"Focus loss immediately hides glove markers")
 	app._set_xr_focus(true)
 	app._update_controllers(DT)
-	_check(left.control_guide.visible and right.control_guide.visible,"Focused tracked hands restore their legends")
+	_check(left.control_guide.visible and right.control_guide.visible,"Focused tracked gloves restore their markers")
 	app.head_tracking_override=false
 	app._update_controllers(DT)
-	_check(not left.control_guide.visible and not right.control_guide.visible,"Invalid headset pose cannot leave misleading viewer-facing legends")
+	_check(not left.control_guide.visible and not right.control_guide.visible,"Invalid headset pose hides viewer-facing letters")
 	app.head_tracking_override=true
 	app._update_controllers(DT)
-	_check(left.control_guide.visible and right.control_guide.visible,"Legends recover after valid head tracking returns")
+	_check(left.control_guide.visible and right.control_guide.visible,"Markers recover after valid head tracking returns")
 	var target: Vector3=app.geometry.probe_grab.global_position
 	right.grip_node.global_position=target
-	_check(app._begin_near_grab(right,target),"Legend context test acquires an actual nearby mechanism")
+	_check(app._begin_near_grab(right,target),"Marker routing test acquires an actual nearby mechanism")
 	app._refresh_tutorial()
-	_check(left.control_guide.labels.stick.text.contains("held"),"Holding with right hand marks left-stick height suspended")
-	_check(not left.control_guide.labels.grip.text.contains("Release"),"Free hand never shows the other hand's release instruction")
-	_check(right.control_guide.labels.grip.text.contains("Release"),"Holding hand explains release to let go")
+	_check(_hand_legend_text(left).strip_edges()=="X Y" and _hand_legend_text(right).strip_edges()=="A B","Held objects add no instruction cards or function text to hardware markers")
 	app._release_near_grab(right,true)
-	left.grip_node.global_position=target
-	_check(app._begin_near_grab(left,target),"Other hand acquires mechanism for opposite stick context")
-	app._refresh_tutorial()
-	_check(right.control_guide.labels.stick.text.contains("held"),"Holding with left hand marks right-stick walking suspended")
-	app._release_near_grab(left,true)
 
 
 func _hand_legend_text(entry:Dictionary) -> String:
 	var text: String=""
 	for label in entry.control_guide.find_children("*","Label3D",true,false):text+=label.text+" "
 	return text
+
+
+func _test_callout_after_controller_poll() -> void:
+	_fresh()
+	app.head_tracking_override=true
+	for command in ["mount","home","guard"]:app._action(command)
+	app.geometry.update_state(app.model.telemetry())
+	app.tutorial.start(app._tutorial_context())
+	app.tutorial.skip_step();app.tutorial.skip_step()
+	app._refresh_tutorial()
+	var target: Node3D=app.geometry.guard_handle
+	right.grip_node.global_position+=target.global_position-right.hand.palm_global()
+	_check(app._begin_near_grab(right,target.global_position),"Callout poll test grips the actual guard handle")
+	right.grip_down=true;right.node.grip=0.9
+	var guard_before: Vector3=target.global_position
+	right.grip_node.global_position.y+=0.14
+	# Enable the production controller poll while retaining deterministic pose
+	# providers and the head-valid override; no OpenXR interface is fabricated.
+	app.xr_active=true
+	app._process(DT)
+	app.xr_active=false
+	_check(target.global_position.y>guard_before.y+0.10,"Production poll moves the held guard during this frame")
+	_near(app.guide_placement.target_world_position,target.global_position,"Callout uses the guard's final polled transform in the same frame")
+	var clear: bool=true
+	if app.guide_placement.visible:
+		for bound in app._guide_obstacles().bounds:clear=clear and not app.guide_placement.bounds.intersects(bound)
+	_check(clear,"Visible guard callout clears final moving geometry rather than the previous pose")
+	_fresh()
+	app.head_tracking_override=true
+	app.tutorial.start(app._tutorial_context())
+	app._refresh_tutorial()
+	var rotor_before: Vector3=app.geometry.rotor_grab.global_position
+	left.node.stick=Vector2(0,1);app.height_armed=true
+	app.xr_active=true
+	app._process(DT)
+	app.xr_active=false
+	_check(app.geometry.rotor_grab.global_position.y>rotor_before.y+0.001,"Production poll adjusts bench height during this frame")
+	_near(app.guide_placement.target_world_position,app.geometry.rotor_grab.global_position,"Callout uses final joystick-adjusted station height in the same frame")
+	clear=true
+	if app.guide_placement.visible:
+		for bound in app._guide_obstacles().bounds:clear=clear and not app.guide_placement.bounds.intersects(bound)
+	_check(clear,"Visible rotor callout clears final station geometry after height movement")
+	_fresh()

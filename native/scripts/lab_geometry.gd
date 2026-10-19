@@ -520,6 +520,7 @@ func _batch(parent: Node3D, node_name: String, mesh: Mesh, material: String, tra
 	var instance := MultiMeshInstance3D.new()
 	instance.name = node_name
 	instance.multimesh = multi
+	instance.set_meta("callout_instance_transforms", transforms.duplicate())
 	instance.material_override = _materials[material]
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(instance)
