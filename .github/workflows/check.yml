@@ -45,3 +45,8 @@ jobs:
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_tutorial.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_tutorial_panel.gd
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_tutorial_app.gd
+      - name: Verify operator workspace and navigation
+        run: |
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_navigation.gd
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_workcell_geometry.gd
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --xr-mode off --path native --script res://tests/test_operator_ui.gd

@@ -68,8 +68,8 @@ func _test_content_and_navigation() -> void:
 	for step in tutorial.steps:
 		_check(not seen.has(step.id), "Lesson identifier is unique: " + step.id)
 		seen[step.id] = true
-		_check(step.body.length() <= 250, "%s body fits concise spatial panel (%d characters)" % [step.id, step.body.length()])
-		_check(step.theory.length() <= 250, "%s theory fits concise spatial panel (%d characters)" % [step.id, step.theory.length()])
+		_check(step.body.length() <= 200, "%s body fits concise floating guide (%d characters)" % [step.id, step.body.length()])
+		_check(step.theory.length() <= 200, "%s theory fits concise floating guide (%d characters)" % [step.id, step.theory.length()])
 		_check(["operate", "balance", "diagnostic", "session"].has(step.practice_tab), "Lesson opens an existing practice tab")
 		_check(step.has("target") and not step.gatehint.is_empty(), "Lesson has practice target and a gate hint")
 	tutorial.start(snapshot)
@@ -82,7 +82,7 @@ func _test_content_and_navigation() -> void:
 	_check(not tutorial.next(snapshot).ok and tutorial.index == 1, "Unfinished practice does not silently advance")
 	_check(tutorial.skip_step().ok and tutorial.index == 2, "Explicit lesson skip advances independently of readiness")
 	_check(tutorial.back().ok and tutorial.index == 1, "Back returns to a previous lesson")
-	tutorial.observe(snapshot, {"command": "lower", "ok": true})
+	tutorial.observe(snapshot, {"command": "height", "ok": true})
 	_check(tutorial.view(snapshot).ready, "Accepted comfort action supplies practice evidence")
 	tutorial.skip()
 	_check(not tutorial.active and tutorial.should_autostart() and not tutorial.completed, "Skip for now preserves next-launch prompting")
@@ -140,6 +140,21 @@ func _test_rejected_and_stale_gates() -> void:
 	_go(tutorial, "touch")
 	tutorial.observe(ctx, {"command": "home", "input_kind": "fingertip", "ok": false})
 	_check(not tutorial.view(ctx).ready, "Rejected physical command cannot satisfy contact practice")
+	ctx.menu_open = true
+	tutorial.observe(ctx, {"target": "tab:operate", "kind": "pointer", "ok": false})
+	ctx.menu_open = false
+	_check(not tutorial.view(ctx).ready, "Raw prevalidation pointer event cannot satisfy menu practice")
+	ctx.menu_open = true
+	tutorial.observe(ctx, {"command": "tab:operate", "input_kind": "pointer", "ok": true})
+	_check(not tutorial.view(ctx).ready, "Accepted pointer selection requires closing menu before A continues")
+	ctx.menu_open = false
+	_check(tutorial.view(ctx).ready, "Accepted menu tab selection and closure unlock practice without a hand button press")
+	tutorial.start(ctx)
+	_go(tutorial, "touch")
+	tutorial.observe(ctx, {"command": "home", "input_kind": "fingertip", "ok": false, "contact_accepted": true})
+	_check(tutorial.view(ctx).ready and not ctx.homed, "Accepted physical contact teaches a press without accepting rejected Home")
+	tutorial.start(ctx)
+	_go(tutorial, "touch")
 	tutorial.observe(ctx, {"command": "tutorial:touch", "ok": "true"})
 	_check(not tutorial.view(ctx).ready, "Text claiming success is not an accepted boolean outcome")
 	tutorial.observe(ctx, {"command": "tutorial:touch", "ok": true})
@@ -242,9 +257,9 @@ func _test_complete_measured_workflow() -> void:
 	var tutorial = Tutorial.new("")
 	tutorial.start(_context(lab))
 	_advance(tutorial, lab, "welcome")
-	tutorial.observe(_context(lab), {"command": "distance", "ok": true})
+	tutorial.observe(_context(lab), {"command": "walk", "ok": true})
 	_advance(tutorial, lab, "comfort")
-	tutorial.observe(_context(lab), {"command": "tutorial:touch", "ok": true})
+	tutorial.observe(_context(lab), {"command": "tab:operate", "input_kind": "pointer", "ok": true})
 	_advance(tutorial, lab, "touch")
 	_accepted(tutorial, lab, "mount", lab.mount_rotor())
 	_advance(tutorial, lab, "load")

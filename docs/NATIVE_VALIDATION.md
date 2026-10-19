@@ -2,6 +2,29 @@
 
 Recorded 18 October 2026. This distinguishes software evidence from physical-headset acceptance.
 
+## Version 0.5 operator workspace
+
+User feedback before this revision described useful guard/knob hand interaction, cards obscuring the fixture, and failed index presses when other fingers were curled. Version 0.5 keeps the menu closed during normal operation, uses controller models/rays/trigger selection in the explicit B/Y menu, and restores hands when it closes. Four tabs show the selected category. Command buttons can be operated entirely through pointers; physical caps are optional. The rear landscape analyzer and separate read-only A/X floating guide replace the old foreground cards. Left-stick height has no duplicate menu buttons; right-stick walking moves the XR origin relative to horizontal head direction.
+
+**4,833 Windows assertions pass** across eleven native suites: 129 science, 980 application commands, 68 direct contact, 475 hand geometry, 85 hand application, 260 tutorial state, 805 guide layout, 142 guide application, 1,291 navigation, 404 workcell/controller geometry, and 194 operator UI. Browser syntax, 15 browser tests, and portable packaging also pass. The guide-application corrupt-settings case deliberately prints a parse diagnostic and verifies recovery. Repeated guide/operator app tests isolate unchanged audio-server teardown; the ordinary scene suite retains production audio setup.
+
+Regressions cover the reported curled-finger bug, actual ownership blocking, hidden-menu collision removal, menu-only ray selection, trigger neutral rearming after aim/grip tracking loss, mutually exclusive hands/controllers, guide gaze stability, accepted versus rejected pointer outcomes, pause/resume and startup persistence, physical and pointer command paths, head/controller focus/tracking gates, joystick rearming, actual XR-origin movement, swept bench collision, room bounds, fixed workshop floor during height adjustment, and menu placement at 18 perimeter/height combinations. Scientific captures and interlocks remain covered by the measured single/two-plane workflows.
+
+Desktop renders were reviewed for the normal workspace, open menu, floating solve lesson, physical console, controller models, and initial/verified analyzer. Actual font widths fit the monitor's two columns; all 23 guide pages fit without truncation. Raising the monitor clears the guard for key measurement fields and plots. Lower contextual lines can be occluded from some near, low viewpoints; walking changes the view. These renders do not establish stereo readability, controller fit, or comfort.
+
+The v0.5.0/code5 ARM64 APK builds, passes Android v2 signature verification, and installs successfully on the connected Quest 2 with the retained development key. Package-manager inspection confirms version 0.5.0/code5, minimum SDK29 and target35. The APK is 89,979,938 bytes; SHA256 `64ee1713a6eb08c244abeec9ca8aefb89ce65b011452d27a8802880652535358`.
+
+Physical acceptance of this revision remains pending. Follow [APK_SETUP.md](APK_SETUP.md) and record:
+
+1. Menu initially hidden; B/Y opens controllers/pointers, selects highlighted tabs with trigger, and restores hands when closed. No unintended presses on mode or tracking changes.
+2. Fixture remains visible; rear monitor and separate guide are readable from comfortable positions, including with the guard raised.
+3. Left-stick height and right-stick forward/back/strafe work after neutral input. Walking stops for menus, held mechanisms, tracking/focus loss, and the bench boundary.
+4. Pointer-only command operation, rotor seating, guard latching, and wrist dials work. Optional physical index pressing also works with other fingers curled when no mechanism is held.
+5. A/X guide navigation, accepted-outcome hints, pause/resume, skip, restart, and startup OFF work without changing laboratory data.
+6. Complete a measured balancing exercise, retrieve its JSON report, test interruption/recovery, and observe at least five foreground minutes of comfort and runtime frame pacing.
+
+See [UX_DESIGN.md](UX_DESIGN.md) for the input/movement contract and primary references. Earlier version records below are historical evidence, not acceptance of version 0.5.
+
 ## Version 0.2 software checks passed
 
 - Godot 4.7.2 Compatibility renderer imports and runs the native project on Windows, including the procedural scene, world-space controls, sampled-signal plots, and report export.

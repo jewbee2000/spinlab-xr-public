@@ -2,15 +2,15 @@
 
 An interactive reaction-wheel balancing and commissioning laboratory for **Meta Quest 2**, built by Walter Teitelbaum. Practice fixture setup, vibration measurement, trial-mass calibration, correction, and verification using synthetic training data.
 
-**Version 0.4 adds a self-paced Learn tutorial to the standalone APK.** Its 23 short WHAT/WHY pages cover physical preparation, measured balancing, signal analysis, recovery, and reports. Practice opens the real controls; Next waits for the required accepted state and advances only when selected. Use the [tutorial guide](docs/TUTORIAL.md), [native installation guide](docs/APK_SETUP.md), [interaction design](docs/DIRECT_INTERACTION_DESIGN.md), [scientific methodology](docs/NATIVE_RESEARCH.md), and [native validation record](docs/NATIVE_VALIDATION.md). Source is in `native/`; build with Godot 4.7.2/OpenXR. The browser version below provides a desktop and WebXR preview.
+**Version 0.5 separates hands-on operation from pointer-based command controls.** The normal workspace has visible controller-driven gloves, nearby handles and dials, optional physical command caps, and a large analyzer behind the fixture. B/Y opens a four-tab menu with controller models and pointing rays; B/Y closes it and restores the gloves. A separate floating guide explains 23 short DO THIS/WHY lessons, with A to continue and X to go back. Use the [installation guide](docs/APK_SETUP.md), [workspace and movement design](docs/UX_DESIGN.md), [tutorial guide](docs/TUTORIAL.md), [interaction design](docs/DIRECT_INTERACTION_DESIGN.md), [scientific methodology](docs/NATIVE_RESEARCH.md), and [validation record](docs/NATIVE_VALIDATION.md). Source is in `native/`; build with Godot 4.7.2/OpenXR. The browser version below provides a separate desktop and WebXR preview.
 
-The default startup view is **LEARN**, the fifth control-panel tab. Choose **Skip for now** to enter the lab, turn **STARTUP: OFF** to keep later launches in the lab, and reopen Learn or select Restart whenever useful. Tutorial navigation preserves current measurements and never operates or resets the fixture automatically. A compact coach keeps the current task visible while practicing in other menus.
+The control menu starts hidden. The guide starts when its startup preference is enabled and sits beside the work area. It never operates or resets the fixture. Practical lessons wait for the required accepted state and advance only when you press A. In the Session menu, pause/resume preserves the page; restart, skip lesson, and startup preference are separate controls. New Session is in Operate.
 
-![Version 0.4 Learn panel in desktop QA, with WHAT/WHY and optional navigation](docs/images/tutorial-native.png)
+![Version 0.5 operator workspace in a wide desktop QA perspective](docs/images/operator-workspace.png)
 
 The scientific lab measures a baseline and independent trial masses, solves single- or two-plane complex influence coefficients, then verifies a newly installed correction. It synthesizes sampled tach-referenced vibration, fits DC/1×/2× by least squares, displays a 0–100 Hz DFT and resonance sweep, estimates three-window Type A repeatability, and exports scientific JSON records. Numerical analysis runs in isolated workers. No web server or network connection is required after installation.
 
-In the headset, press a menu button with the visible index tip and withdraw before pressing again. Squeeze a nearby rotor, guard handle, or dial to hold it; release to let go. The visible gloves follow the Touch controllers, with no optical hand-tracking setting required. Dials respond to wrist rotation and nearby ± buttons. Short B/Y presses cycle the five menus; holding B/Y enables optional menu reach assist. Left-stick height adjustment and Session-menu distance/recenter controls help place the bench within reach. Reach assist operates menu buttons; loading and the enclosure still require physical grips.
+Use the B/Y menu and controller pointers for command buttons. Physical caps are an optional alternative; push with the index tip, then withdraw. Squeeze the nearby rotor, orange guard handle, or dial to hold it; release to let go. Dials respond to wrist rotation and nearby ± buttons. Keep holding the Touch controllers; optical hand tracking is not required. In the open menu, point and use the index trigger, then choose Close or press B/Y. The left stick adjusts bench height; the right stick walks at up to 0.65 m/s relative to head direction. Walking is suspended during menus, active holds, lost focus, or unavailable tracking and requires the stick to return to neutral before resuming. Recenter is in Session.
 
 ```powershell
 # Once the local native toolchain is prepared:
@@ -22,7 +22,7 @@ In the headset, press a menu button with the visible index tip and withdraw befo
 
 Fresh Windows build setup: `tools/Setup-NativeToolchain.ps1` downloads pinned Godot/plugin/Android versions plus JDK 17, configures Godot's Android paths, and prepares a local development signing key. Toolchain downloads are large. Keep `.local/spinlab-debug.keystore` for compatible future updates; it is excluded from Git. The APK is a signed development build. Physical headset evidence is recorded separately from software checks.
 
-The v0.4 build output is `artifacts/SpinLabXR-v0.4.0.apk`. Download packaged builds from [Releases](https://github.com/jewbee2000/spinlab-xr-public/releases) and retain the installed version/hash with feedback. A physical Quest 2 smoke test confirmed v0.2's visible lab, controller button interaction, and spinning rotor; v0.3 and v0.4 installed successfully. Direct-hand acceptance, report retrieval, and sustained performance remain pending, and v0.4's tutorial needs its own physical acceptance. See the validation record for build/install evidence.
+The v0.5 build output is `artifacts/SpinLabXR-v0.5.0.apk`. Download packaged builds from [Releases](https://github.com/jewbee2000/spinlab-xr-public/releases) and retain the installed version/hash with feedback. Earlier physical observations established the lab, spinning rotor, and controller interactions; subsequent feedback informed the workspace redesign. Version 0.5's menu, floating guide, walking, contact changes, report retrieval, and sustained performance require their own headset acceptance. See the validation record for exact build/install evidence.
 
 ![Original simulated glove designs, open and gripping poses in desktop QA](docs/images/virtual-gloves.png)
 
@@ -44,7 +44,7 @@ node tools/serve.mjs
 
 Open **http://localhost:8080** on the computer for the desktop preview. For the physical Quest 2, follow [the installation guide](docs/INSTALL_QUEST2.md): enable developer USB debugging, connect a data cable, run `adb reverse tcp:8080 tcp:8080`, open **http://localhost:8080 in Quest Browser**, then select **Enter VR**. Rendering runs on the headset; the computer serves files. Keep the cable and server connected for reloads.
 
-These browser instructions apply to version 0.1. For the standalone version 0.4 APK, use the native guide above. Physical acceptance is recorded in the native validation document.
+These browser instructions apply to version 0.1. For the standalone version 0.5 APK, use the native guide above. Physical acceptance is recorded in the native validation document.
 
 ## Browser guided exercise
 
@@ -64,7 +64,8 @@ Phase is an ideally compensated imbalance position, not a raw accelerometer phas
 
 ## Engineering documents
 
-- [Learn tutorial, lesson coverage, and navigation](docs/TUTORIAL.md)
+- [Floating guide, lesson coverage, and navigation](docs/TUTORIAL.md)
+- [Workspace, menu, guide, and movement design](docs/UX_DESIGN.md)
 - [Project architecture and development roadmap](docs/PROJECT_PLAN.md)
 - [Primary-source research and model assumptions](docs/RESEARCH.md)
 - [Quest 2 setup, testing, and troubleshooting](docs/INSTALL_QUEST2.md)
