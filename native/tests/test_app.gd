@@ -78,7 +78,7 @@ func _sync_ui() -> void:
 
 func _test_world_controls() -> void:
 	app._set_menu_open(true)
-	for menu in ["operate", "balance", "diagnostic", "session"]:
+	for menu in ["balance", "diagnostic", "session"]:
 		_tab(menu)
 		var menu_count := 0
 		for button in app.buttons:
@@ -138,7 +138,7 @@ func _test_action_map() -> void:
 func _acquire(command: String) -> bool:
 	var count_before: int = app.model.records.size()
 	_click(command)
-	_check(app.model.running and app.model.run_kind == command, "Menu starts acquisition " + command)
+	_check(app.model.running and app.model.run_kind == command, "World control starts acquisition " + command)
 	if not app.model.running:
 		return false
 	for step in range(850):
@@ -155,7 +155,7 @@ func _acquire(command: String) -> bool:
 
 func _guard(closed: bool) -> void:
 	if app.model.guard_closed != closed:
-		_tab("operate")
+		_tab("balance")
 		app._action("guard")
 	_check(app.model.guard_closed == closed, "Guard is " + ("closed" if closed else "open"))
 
@@ -168,20 +168,20 @@ func _check_chart(kind: String) -> void:
 
 
 func _test_balance_workflow(two_plane: bool) -> void:
-	_tab("operate")
+	_tab("session")
 	_click("new")
 	app.model.async_processing = false
 	_check(not app.model.mounted and app.model.records.is_empty(), "Session reset clears fixture and records")
 	if two_plane:
-		_tab("operate")
+		_tab("balance")
 		_click("mode")
 	_check(app.model.mode == ("two_plane" if two_plane else "single"), "Requested balancing method selected")
-	_tab("operate")
+	_tab("balance")
 	app._action("mount")
 	_click("home")
 	_check(app.model.mounted and app.model.homed, "Load and home commands prepare fixture")
 	_guard(true)
-	_tab("operate")
+	_tab("balance")
 	if not _acquire("baseline"):
 		return
 	_check(not app.model.baseline.is_empty(), "Baseline is available to calibration")

@@ -1,0 +1,19 @@
+{
+  "asset": "Oculus Touch v3 / Quest 2 controller models",
+  "upstream_repository": "https://github.com/immersive-web/webxr-input-profiles",
+  "commit": "afcd4423001acd0ff981c6860c71ca49c7b43e52",
+  "commit_description": "Adding profile and assets for oculus-touch-v3 (Quest 2) controllers",
+  "source_directory": "packages/assets/profiles/oculus-touch-v3",
+  "license": "MIT",
+  "license_source": "https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/afcd4423001acd0ff981c6860c71ca49c7b43e52/packages/assets/LICENSE.md",
+  "license_notice": "Copyright (c) 2019 Amazon. Full notice retained in LICENSE.txt and LICENSE.md.",
+  "license_evidence": "Upstream packages/assets/README.md explicitly licenses its glTF/glb assets under MIT.",
+  "trademark_notice": "Device trademarks depict the corresponding physical device. No manufacturer endorsement or rights to alternate trademark-bearing controller skins are implied. See upstream packages/assets/README.md#trademarks.",
+  "modifications": "None to GLB files. Godot imports them and the application interpolates their authored control-node ranges at runtime.",
+  "derived_files": "The left_/right_ color PNG and ambient-occlusion/metallic/roughness JPEG files in this folder are Godot's unedited extractions of the two embedded images from each source GLB. They retain the same MIT license. Import sidecars preserve the texture/resource dependencies for a fresh checkout; .godot runtime/import caches are excluded from source control.",
+  "files": {
+    "left.glb": {"bytes":665820,"sha256":"5a3015792dac074b31607e63eeb75743eac479540a36739e5f94b65335a7f88a"},
+    "right.glb": {"bytes":665920,"sha256":"18a2e651328b684d3aeeef9f16c083af1eea9c1f98f78f9da94960432c8a021b"}
+  },
+  "runtime_preference": "OpenXRFbRenderModel loads the device's own model when available. Runtime model data is not stored in this repository or exported as an asset. Unknown runtime node layouts remain static; automatic animation is not assumed."
+}

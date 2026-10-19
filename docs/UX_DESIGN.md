@@ -1,6 +1,6 @@
 # Operator interaction redesign
 
-Version 0.5.2 separates the physical station, its analyzer, optional instruction, and the application menu. This document records the input contract and locomotion mathematics. Hardware acceptance of this revision is pending; previous launches, desktop captures, or numerical tests do not establish headset comfort or reliable physical interaction.
+Version 0.6.0 separates the physical station, its analyzer, optional instruction, and the application menu. This document records the input contract and locomotion mathematics. Hardware acceptance of this revision is pending; previous launches, desktop captures, or numerical tests do not establish headset comfort or reliable physical interaction.
 
 ## Workstation and menu
 
@@ -12,11 +12,19 @@ The guide measures 0.94 × 0.66 m, with 22.8 mm nominal body/theory text and 31.
 
 Placement is world-anchored while reading, navigating pages, and closing a menu. Start/restart, recenter, or loss of a usable front/near reading position may establish a new anchor. This prevents repeated menu use while looking towards the card from orbiting it farther around the user. The menu separately checks the yawed analyzer frame as an obstacle. These are sampled software checks at specific poses; arbitrary viewpoints, actual eye optics, stereo comfort, and readability in the Quest remain hardware acceptance items.
 
-The optional floating guide sits beside the work area and explains DO THIS and WHY. It points out the current physical target. It must not cover the analyzer or the button/handle the user needs. Progress remains manual and state-gated: pressing A/Next cannot invent an accepted measurement or operate the apparatus. Turning your head towards the guide and pressing A/X leaves it anchored; it does not reposition another step sideways on every page. Starting, restarting, skipping, and changing guide preferences preserve laboratory data. Deliberately using Home, changing measurement setup, or practicing faults can invalidate calibration as documented by the lab.
+The optional floating guide sits beside the work area and explains DO THIS and WHY. It points out the current physical target. It must not cover the analyzer or the button/handle the user needs. The guide teaches physical balancing work rather than menu navigation. Its 15 physical-work stages advance after a confirmed action or completed measurement and a 1.5-second success dwell. Rejected actions, partial acquisitions, and a moving/coasting rotor cannot satisfy a completed-measurement stage. X opens earlier-stage review and pauses automatic progression until A returns to the current task. A/Next remains an optional ready-task shortcut; it cannot invent an accepted measurement or operate the apparatus. Turning your head towards the guide and pressing A/X leaves it anchored; it does not reposition another step sideways on every page. Starting, restarting, skipping, and changing guide preferences preserve laboratory data. Deliberately using Home, changing measurement setup, or practicing faults can invalidate calibration as documented by the lab.
 
-**B or Y opens/closes an explicit menu.** Opening it replaces the simulated gloves with Touch-controller representations and aim pointers. Point and use the trigger to choose menu controls. Menu input has its own collision layer; it must not reach through the menu to actuate physical buttons. Pointer selection and grip acquisition require release/rearming after interruption; fingertip contact requires a fresh front approach after the menu closes. Merely opening the menu does not reset the model or start/stop a measurement.
+**B or Y opens/closes an explicit menu.** Opening it replaces the simulated gloves with runtime-supplied controller models, supported Capsense hands, and aim pointers. Point and use the trigger to choose menu controls. Menu input has its own collision layer; it must not reach through the menu to actuate physical buttons. Pointer selection and grip acquisition require release/rearming after interruption; fingertip contact requires a fresh front approach after the menu closes. Merely opening the menu does not reset the model or start/stop a measurement.
 
-Operate, Balance, Analyze, and Session remain menu categories. The guide is managed in Session rather than occupying a fifth tab. Session includes guide pause/resume, restart, skip lesson, startup preference, walking on/off, report save, recenter, and Exit; New Session is in Operate. Pausing/resuming keeps the current guide page and temporary practice history, while Restart begins it again. B/Y always provides the visible menu transition; holding it does not secretly enable another interaction mode.
+The menu has exactly three categories: **Balance, Analyze, and Session**. Physical console caps provide the ordinary operating workflow. Session manages the guide. Session includes guide pause/resume, restart, skip lesson, startup preference, walking on/off, report save, recenter, and New Session. Exit through the Quest system menu. Pausing/resuming keeps the current guide page and temporary practice history, while Restart begins it again. B/Y always provides the visible menu transition; holding it does not secretly enable another interaction mode.
+
+## Menu controller models and Capsense hands
+
+The menu prefers the headset's controller model through the pinned OpenXR Vendors `OpenXRFbRenderModel` API, attached to the grip pose. If unavailable, pinned MIT-licensed Quest 2 Touch v3 GLB assets provide the correct controller layout; authored control transforms animate the fallback. Model appearance does not change the action map or aim ray.
+
+Controller-conforming hands use Meta's Capsense data through `XR_EXT_hand_tracking_data_source` and `XR_EXT_hand_joints_motion_range`. A runtime hand mesh and `XRHandModifier3D` follow the controller-derived joint poses, including capacitive touch behavior, when valid data are available. The overlay is translucent, depth-tested, and visual only. It is hidden outside the menu or when grip/head tracking, focus, mesh readiness, or controller-source joint validity is missing. Optical/unknown hand data cannot substitute for controller poses. The tracked palm hierarchy sits directly under `XROrigin3D`, preventing a second grip transform. [Meta native Capsense](https://developers.meta.com/vr/documentation/native/android/native-capsense/), [vendor runtime model API](https://godotvr.github.io/godot_openxr_vendors/api/class_openxrfbrendermodel.html).
+
+The physical-work mode retains the original controller-driven gloves and wrist legends. The new menu model's actual alignment, finger placement, and hover behavior need a physical v0.6.0 check. The user's v0.5.1 feedback confirmed upright text and acceptable guide/analyzer appearance while identifying controller button/stick placement as wrong; that feedback does not validate the replacement graphics.
 
 ## Hand button guides
 
@@ -31,17 +39,17 @@ Legends follow hand position while facing the current viewer; wrist rotation can
 | Input | Menu closed / laboratory | Menu open |
 | --- | --- | --- |
 | B or Y | Open menu; show controller pointers. | Close menu; return to gloves. |
-| Right A | Continue the guide only when its current objective is ready. | No hidden physical station action. |
-| Left X | Go back one guide page. | No hidden physical station action. |
+| Right A | Optional review: continue only when the current objective is ready. | No hidden physical station action. |
+| Left X | Review the previous guide stage. | No hidden physical station action. |
 | Index trigger | Animate the index finger; release it to extend the visible fingertip for physical pressing. | Select a pointed menu control after a fresh release/press. |
 | Side grip | Acquire/release an actual nearby rotor, handle, or dial. | Does not acquire hidden mechanical targets. |
 | Right stick | Walk horizontally relative to head direction when navigation is permitted. | No walking. |
 | Left stick vertical | Adjust station height when no mechanism is held. | No station movement. |
 | Physical index-tip press | Actuate a front-facing physical button once per deliberate approach/withdrawal. | Disabled. |
 
-Chart changes belong to the physical analyzer/station controls and Analyze menu; A/X are guide navigation. A loose squeeze with no acquired object must not suppress all fingertip presses. Actual held-object state, tracking, and the contact state machine govern whether physical contact is available. The existing front-approach, actuation stroke, shared latch, and withdrawal rules remain in effect.
+Chart changes belong to the physical analyzer/station controls and Analyze menu; A/X provide optional guide review; normal progression follows confirmed work. A loose squeeze with no acquired object must not suppress all fingertip presses. Actual held-object state, tracking, and the contact state machine govern whether physical contact is available. The existing front-approach, actuation stroke, shared latch, and withdrawal rules remain in effect.
 
-Desktop review uses M for the explicit menu, 1–4 for its categories, Space for guide Next, and Backspace for guide Back. Desktop clicks and renders exercise shared command behavior, not stereo or actual Touch pose alignment.
+Desktop review uses M for the explicit menu, 1–3 for its categories, Space for ready-review Next, and Backspace for review Back. Desktop clicks and renders exercise shared command behavior, not stereo or actual Touch pose alignment.
 
 ## Commanded walking
 
@@ -91,10 +99,10 @@ The pure `native/tests/test_navigation.gd` suite checks deadzone/analog strength
 Application and headset acceptance must additionally check:
 
 - B/Y changes only the intended interaction mode; menu pointers cannot activate hidden station buttons, and closing a menu with trigger/grip held requires fresh release.
-- A advances only a ready guide page and X goes back, with no old A/X chart shortcut. Guide and analyzer text remain readable without covering the physical target.
+- Confirmed work advances the guide after one 1.5-second success cue; incomplete/rejected work does not. A continues only a ready review stage and X goes back. Guide and analyzer text remain readable without covering the physical target.
 - Actual loose grip does not disable fingertip buttons; an acquired tool does. Each hand can press, withdraw, carry, latch, and rotate the intended control.
 - Right-stick walking follows head yaw at a consistent speed, stops immediately on neutral/menu/hold/tracking/focus loss, and requires rearming after interruption. Left-stick height cannot raise the room floor or move a held mechanism unexpectedly.
 - The head can travel around the expanded bench rectangle without tunneling, sticky corners, forced elevation, or a sudden recovery snap. Recenter remains explicit and restores a usable operator position.
 - Seated and standing users can disable walking, read the monitor/guide, reach required controls, and complete a measured balancing exercise. Record the actual APK hash, headset OS/runtime, tracking interruptions, perceived comfort, and sustained foreground performance separately.
 
-Hardware observations remain pending until performed on the installed redesign build. Keep those observations separate from the historical v0.2/v0.3/v0.4 evidence and software test counts.
+Hardware observations for v0.6.0 remain pending until performed on that build. Keep them separate from earlier launch evidence, the limited v0.5.1 feedback, and software test counts.

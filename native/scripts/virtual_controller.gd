@@ -1,192 +1,169 @@
 class_name VirtualController
 extends Node3D
-## Original controller visualization, not a vendor CAD model. Uses the OpenXR
-## grip frame: +Z runs toward the little finger; the thumb deck faces -Z.
-## On that deck, glyph up and the front/trigger direction are -Y, not +Y.
-## Khronos defines grip independently from the runtime's pointing/aim pose:
-## https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-grip-pose
-## Meta's input layout: left X/Y, right A/B. This original procedural model
-## approximates the physical casing; it is not a calibrated vendor CAD model.
-## https://developers.meta.com/vr/documentation/unreal/unreal-touch-controller/
-## The application supplies the separate aim ray and input, unchanged here.
+## Actual Quest 2 GLBs, with the headset's FB render model preferred.
+## Bundled geometry/layout is unmodified immersive-web oculus-touch-v3 (MIT).
+## See assets/controllers/oculus-touch-v3/PROVENANCE.json and LICENSE.txt.
+## All authored transforms are retained. Input/aim/grab ownership stays in main.
+## FB supplies geometry, not automatic animation. Only discovered authored
+## min/max/value control ranges animate; diagnostics report the bound count.
 
-const DECK_OUTWARD := Vector3(0,0,-1)
-const DECK_GLYPH_UP := Vector3(0,-1,0)
-const HANDLE_TOWARD_LITTLE := Vector3(0,0,1)
-# Label3D's +Z is its front, +Y is glyph up. This proper rotation keeps
-# rightward text +X while sending both of those axes to the deck convention.
-const DECK_LABEL_BASIS := Basis(Vector3(1,0,0),Vector3(0,-1,0),Vector3(0,0,-1))
+const ASSET_DIRECTORY := "res://assets/controllers/oculus-touch-v3/"
+const ASSET_COMMIT := "afcd4423001acd0ff981c6860c71ca49c7b43e52"
+const CHANNEL_NAMES := {
+	"xr_standard_trigger_pressed":"trigger", "xr_standard_squeeze_pressed":"grip",
+	"xr_standard_thumbstick_pressed":"stick_click", "xr_standard_thumbstick_xaxis_pressed":"stick_x",
+	"xr_standard_thumbstick_yaxis_pressed":"stick_y", "a_button_pressed":"primary_click",
+	"x_button_pressed":"primary_click", "b_button_pressed":"secondary_click",
+	"y_button_pressed":"secondary_click", "thumbrest_pressed":"thumbrest_touch"
+}
 
 var model_root: Node3D
-var button_labels: Array[Label3D] = []
-## Non-rendering, non-interactive coordinates for pose QA and future fitting.
-var pose_markers: Dictionary = {}
+var fallback_root: Node3D
+var visual_source := "bundled_quest2"
+var runtime_status := "not_requested"
+var controls: Dictionary = {}
+var input_state: Dictionary = {}
 var _side := "right_hand"
-var _built := false
-var _trigger: Node3D
-var _grip: Node3D
-var _trigger_value := 0.0
-var _grip_value := 0.0
-var _materials: Dictionary = {}
+var _channels: Dictionary = {}
+var _runtime_host: Node3D
+var _runtime_requested := false
 
 
 func _ready() -> void:
-	if not _built:_build()
+	if not is_instance_valid(fallback_root):configure(_side)
 
 
 func configure(side: String) -> void:
 	var chosen := "left_hand" if side in ["left_hand","left"] else "right_hand"
-	if _built and chosen!=_side:
-		remove_child(model_root)
-		model_root.queue_free()
-		_built=false
+	if is_instance_valid(fallback_root) and chosen==_side:return
 	_side=chosen
-	if not _built:_build()
-	set_pose(_trigger_value,_grip_value)
+	if is_instance_valid(_runtime_host):
+		remove_child(_runtime_host);_runtime_host.queue_free();_runtime_host=null
+	if is_instance_valid(fallback_root):
+		remove_child(fallback_root);fallback_root.queue_free()
+	_runtime_requested=false;runtime_status="not_requested"
+	var asset_path := ASSET_DIRECTORY+("left.glb" if _side=="left_hand" else "right.glb")
+	var packed := load(asset_path) as PackedScene
+	if packed==null:
+		push_error("Quest 2 controller asset did not import: "+asset_path)
+		return
+	fallback_root=packed.instantiate() as Node3D
+	add_child(fallback_root)
+	fallback_root.name="Quest2BundledModel"
+	_activate_model(fallback_root,"bundled_quest2")
+	update_inputs(input_state,0.0)
 
 
-func _build() -> void:
-	model_root=Node3D.new()
-	model_root.name="TrackedControllerVisual"
-	add_child(model_root)
-	button_labels.clear()
-	pose_markers.clear()
-	_materials.clear()
-	_material("shell",Color("18212b"),0.56)
-	_material("plate",Color("35414d"),0.43)
-	_material("rubber",Color("0b1118"),0.87)
-	_material("trigger",Color("788894"),0.45)
-	_material("text",Color("e6f6f5"),0.8,true)
-	_material("accent",Color("65e6da"),0.5,true)
-	var mirror := -1.0 if _side=="left_hand" else 1.0
-	_marker("GripOrigin",Vector3.ZERO,Basis.IDENTITY)
-	_marker("ThumbDeckFrame",Vector3(0,-0.015,-0.073),DECK_LABEL_BASIS)
-	_marker("HandleTail",Vector3(0,0.008,0.089),Basis.IDENTITY)
-	_marker("IndexTriggerFront",Vector3(0,-0.055,-0.014),Basis.IDENTITY)
-	var handle := CapsuleMesh.new()
-	handle.radius=0.023;handle.height=0.125
-	handle.radial_segments=16;handle.rings=6
-	var body=_mesh(model_root,handle,"shell","ErgonomicHandle")
-	body.transform=Transform3D(Basis(Vector3.RIGHT,PI/2).scaled(Vector3(0.92,1.12,1)),Vector3(0,0.008,0.019))
-	var face=_mesh(model_root,_sphere(),"plate","ThumbControlDeck")
-	face.position=Vector3(0,-0.015,-0.052)
-	face.scale=Vector3(0.039,0.052,0.017)
-	var ring_mesh := TorusMesh.new()
-	ring_mesh.inner_radius=0.060;ring_mesh.outer_radius=0.067
-	ring_mesh.rings=40;ring_mesh.ring_segments=6
-	var ring=_mesh(model_root,ring_mesh,"shell","TrackingRing")
-	ring.position=Vector3(0,-0.019,-0.049)
-	ring.rotation.x=PI/2
-	var ring_stripe := TorusMesh.new()
-	ring_stripe.inner_radius=0.0645;ring_stripe.outer_radius=0.0655
-	ring_stripe.rings=40;ring_stripe.ring_segments=4
-	var stripe=_mesh(model_root,ring_stripe,"trigger","RingSeam")
-	stripe.position=Vector3(0,-0.019,-0.053)
-	stripe.rotation.x=PI/2
-	var ribs_mesh := TorusMesh.new()
-	ribs_mesh.inner_radius=0.0220;ribs_mesh.outer_radius=0.0231
-	ribs_mesh.rings=16;ribs_mesh.ring_segments=4
-	var ribs := MultiMesh.new()
-	ribs.transform_format=MultiMesh.TRANSFORM_3D
-	ribs.mesh=ribs_mesh;ribs.instance_count=4
-	for index in range(4):
-		ribs.set_instance_transform(index,Transform3D(Basis(Vector3.RIGHT,PI/2).scaled(Vector3(0.92,1.12,1)),Vector3(0,0.008,0.001+index*0.018)))
-	var rib_instance := MultiMeshInstance3D.new()
-	rib_instance.name="GripTextureRibs";rib_instance.multimesh=ribs;rib_instance.material_override=_materials.rubber
-	rib_instance.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	model_root.add_child(rib_instance)
-	_trigger=Node3D.new()
-	_trigger.name="IndexTrigger"
-	_trigger.position=Vector3(0,-0.044,-0.014)
-	model_root.add_child(_trigger)
-	var trigger=_mesh(_trigger,_sphere(),"trigger","TriggerPaddle")
-	trigger.scale=Vector3(0.022,0.011,0.019)
-	_grip=Node3D.new()
-	_grip.name="SideGripButton"
-	# The middle fingers squeeze the inward-facing paddle, opposite the palm.
-	_grip.position=Vector3(-mirror*0.022,0.006,0.022)
-	model_root.add_child(_grip)
-	var grip_shape := BoxMesh.new()
-	grip_shape.size=Vector3(0.006,0.026,0.037)
-	_mesh(_grip,grip_shape,"trigger","GripPaddle")
-	var stick_pos := Vector3(-mirror*0.013,-0.027,-0.073)
-	_disc(model_root,"JoystickSocket",0.015,0.003,stick_pos,"rubber")
-	_disc(model_root,"JoystickStem",0.006,0.010,stick_pos+Vector3(0,0,-0.005),"trigger")
-	_disc(model_root,"JoystickCap",0.012,0.005,stick_pos+Vector3(0,0,-0.012),"rubber")
-	var labels := ["X","Y"] if _side=="left_hand" else ["A","B"]
-	for index in range(2):
-		# Primary A/X is nearer the wrist; B/Y is farther forward toward the
-		# index finger. Mirror only the lateral positions, never glyph scale.
-		var pos := Vector3(mirror*(0.013+index*0.008),0.008-index*0.024,-0.073)
-		_disc(model_root,"FaceButton"+str(index),0.0087,0.006,pos,"rubber")
-		var label=_label(labels[index],pos+Vector3(0,0,-0.0045),0.00025)
-		label.name="PrimaryLabel" if index==0 else "SecondaryLabel"
-		label.set_meta("component","primary" if index==0 else "secondary")
-		button_labels.append(label)
-	_disc(model_root,"SystemButton",0.006,0.004,Vector3(-mirror*0.020,0.022,-0.071),"rubber")
-	var system_label=_label("≡" if _side=="left_hand" else "○",Vector3(-mirror*0.020,0.022,-0.074),0.00022)
-	system_label.name="MenuLabel" if _side=="left_hand" else "SystemLabel"
-	var side_label=_label("L" if _side=="left_hand" else "R",Vector3(0,0.033,-0.069),0.00027)
-	side_label.name="HandednessLabel"
-	var led_shape := BoxMesh.new();led_shape.size=Vector3(0.012,0.0025,0.002)
-	var led=_mesh(model_root,led_shape,"accent","ControllerStatusLED")
-	led.position=Vector3(0,0.012,-0.071)
-	_built=true
-	set_pose(_trigger_value,_grip_value)
+func enable_runtime() -> bool:
+	if _runtime_requested:return is_instance_valid(_runtime_host)
+	_runtime_requested=true
+	var interface := XRServer.find_interface("OpenXR")
+	if interface==null or not interface.is_initialized() or not ClassDB.class_exists("OpenXRFbRenderModel"):
+		runtime_status="unavailable"
+		return false
+	_runtime_host=ClassDB.instantiate("OpenXRFbRenderModel") as Node3D
+	if _runtime_host==null:
+		runtime_status="unavailable"
+		return false
+	_runtime_host.name="QuestRuntimeController"
+	_runtime_host.set("render_model_type",0 if _side=="left_hand" else 1)
+	_runtime_host.visible=false
+	_runtime_host.connect("openxr_fb_render_model_loaded",_runtime_model_loaded)
+	runtime_status="waiting"
+	add_child(_runtime_host)
+	# ENTER_TREE may load synchronously if a session is already active.
+	if _runtime_host.call("has_render_model_node"):_runtime_model_loaded()
+	return true
 
 
-func set_pose(trigger: float, grip: float, _thumb_touch: bool=false, _holding: bool=false) -> void:
-	_trigger_value=clampf(trigger,0,1) if is_finite(trigger) else 0.0
-	_grip_value=clampf(grip,0,1) if is_finite(grip) else 0.0
-	if not _built:return
-	_trigger.position.y=-0.044+_trigger_value*0.007
-	_trigger.rotation.x=-_trigger_value*0.20
-	_grip.position.x=(1.0 if _side=="left_hand" else -1.0)*(0.022-_grip_value*0.003)
+func _runtime_model_loaded() -> void:
+	if not is_instance_valid(_runtime_host):return
+	var loaded := _runtime_host.call("get_render_model_node") as Node3D
+	if not is_instance_valid(loaded) or loaded==model_root:return
+	if loaded.find_children("*","MeshInstance3D",true,false).is_empty():return
+	runtime_status="loaded"
+	_runtime_host.visible=true
+	fallback_root.visible=false
+	_activate_model(loaded,"runtime_fb")
+	_apply_inputs()
 
 
-func _material(key: String, color: Color, roughness: float, unshaded: bool=false) -> void:
-	var material := StandardMaterial3D.new()
-	material.albedo_color=color;material.roughness=roughness
-	if unshaded:material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
-	_materials[key]=material
+func set_pose(trigger: float, grip: float, thumb_touch: bool=false, _holding: bool=false) -> void:
+	# Compatibility: retain other button and stick states.
+	var values := input_state.duplicate()
+	values.trigger=trigger;values.grip=grip;values.stick_touch=thumb_touch
+	update_inputs(values,0.0)
 
 
-func _mesh(parent: Node3D, mesh: Mesh, key: String, node_name: String) -> MeshInstance3D:
-	var instance := MeshInstance3D.new()
-	instance.name=node_name;instance.mesh=mesh;instance.material_override=_materials[key]
-	instance.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(instance)
-	return instance
+## Keys: trigger/grip, stick(Vector2), stick_click, primary_click(A/X),
+## secondary_click(B/Y), primary_touch, secondary_touch, stick_touch,
+## trigger_touch, thumbrest_touch. A touch never becomes a click. Physical
+## values apply directly; delta remains available for caller compatibility.
+func update_inputs(values: Dictionary, _delta: float=0.0) -> void:
+	var stick_value: Variant=values.get("stick",values.get("thumbstick",Vector2.ZERO))
+	var stick: Vector2=stick_value if typeof(stick_value)==TYPE_VECTOR2 else Vector2.ZERO
+	if not stick.is_finite():stick=Vector2.ZERO
+	stick=stick.clamp(Vector2(-1,-1),Vector2.ONE)
+	input_state={"trigger":_bounded(values.get("trigger",0.0)),"grip":_bounded(values.get("grip",0.0)),
+		"stick":stick,"stick_click":_pressed(values.get("stick_click",false)),
+		"primary_click":_pressed(values.get("primary_click",values.get("ax_click",values.get("ax_button",false)))),
+		"secondary_click":_pressed(values.get("secondary_click",values.get("by_click",values.get("by_button",false)))),
+		"primary_touch":_pressed(values.get("primary_touch",values.get("ax_touch",false))),
+		"secondary_touch":_pressed(values.get("secondary_touch",values.get("by_touch",false))),
+		"stick_touch":_pressed(values.get("stick_touch",false)),"trigger_touch":_pressed(values.get("trigger_touch",false)),
+		"thumbrest_touch":_pressed(values.get("thumbrest_touch",false))}
+	# A session reload may retire the old runtime scene before its replacement
+	# arrives. Keep the bundled asset visible in that interval.
+	if visual_source=="runtime_fb" and (not is_instance_valid(model_root) or model_root.is_queued_for_deletion()):
+		fallback_root.visible=true
+		if is_instance_valid(_runtime_host):_runtime_host.visible=false
+		runtime_status="waiting"
+		_activate_model(fallback_root,"bundled_quest2")
+	_apply_inputs()
 
 
-func _sphere() -> SphereMesh:
-	var mesh := SphereMesh.new()
-	mesh.radius=1.0;mesh.height=2.0;mesh.radial_segments=16;mesh.rings=8
-	return mesh
+func get_diagnostics() -> Dictionary:
+	return {"source":visual_source,"side":_side,"runtime_status":runtime_status,
+		"animation_channels":_channels.size(),"channels":_channels.keys(),"asset_commit":ASSET_COMMIT,
+		"note":"Authored node ranges only; FB render models are not assumed to animate automatically."}
 
 
-func _disc(parent: Node3D, node_name: String, radius: float, height: float, pos: Vector3, material: String) -> MeshInstance3D:
-	var mesh := CylinderMesh.new()
-	mesh.top_radius=radius;mesh.bottom_radius=radius;mesh.height=height;mesh.radial_segments=20
-	var instance=_mesh(parent,mesh,material,node_name)
-	instance.position=pos;instance.rotation.x=PI/2
-	return instance
+func _activate_model(model: Node3D, source: String) -> void:
+	model_root=model;visual_source=source
+	_channels.clear();controls.clear()
+	var named: Dictionary={}
+	for node in model.find_children("*","Node3D",true,false):named[str(node.name)]=node
+	for prefix in CHANNEL_NAMES:
+		var value: Node3D=named.get(prefix+"_value")
+		var minimum: Node3D=named.get(prefix+"_min")
+		var maximum: Node3D=named.get(prefix+"_max")
+		if value==null or minimum==null or maximum==null:continue
+		if value.get_parent()!=minimum.get_parent() or value.get_parent()!=maximum.get_parent():continue
+		var key: String=CHANNEL_NAMES[prefix]
+		_channels[key]={"value":value,"minimum":minimum.transform,"maximum":maximum.transform}
+		controls[key]=value
+	for mesh in model.find_children("*","MeshInstance3D",true,false):
+		mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	print("SPINLAB_CONTROLLER_SOURCE side=",_side," source=",source," animation_channels=",_channels.size())
 
 
-func _label(text: String, pos: Vector3, pixel_size: float) -> Label3D:
-	var label := Label3D.new()
-	label.text=text;label.position=pos;label.basis=DECK_LABEL_BASIS
-	label.font_size=28;label.pixel_size=pixel_size;label.modulate=Color("e6f6f5")
-	label.outline_size=0;label.shaded=false
-	label.double_sided=false
-	model_root.add_child(label)
-	return label
+func _apply_inputs() -> void:
+	for key in _channels:
+		var channel: Dictionary=_channels[key]
+		if not is_instance_valid(channel.value):continue
+		var amount: float
+		if key=="stick_x":amount=(input_state.get("stick",Vector2.ZERO).x+1.0)*0.5
+		elif key=="stick_y":amount=(input_state.get("stick",Vector2.ZERO).y+1.0)*0.5
+		else:amount=float(input_state.get(key,0.0))
+		channel.value.transform=channel.minimum.interpolate_with(channel.maximum,clampf(amount,0.0,1.0))
+		channel.value.set_meta("visual_input",amount)
 
 
-func _marker(node_name: String, position_m: Vector3, frame: Basis) -> void:
-	var marker:=Marker3D.new()
-	marker.name=node_name
-	marker.transform=Transform3D(frame,position_m)
-	marker.set_meta("pose_coordinate",true)
-	model_root.add_child(marker)
-	pose_markers[node_name]=marker
+func _bounded(value: Variant) -> float:
+	if typeof(value) not in [TYPE_INT,TYPE_FLOAT]:return 0.0
+	var number := float(value)
+	return clampf(number,0.0,1.0) if is_finite(number) else 0.0
+
+
+func _pressed(value: Variant) -> bool:
+	return value if typeof(value)==TYPE_BOOL else false
