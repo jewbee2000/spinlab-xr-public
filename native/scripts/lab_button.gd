@@ -13,6 +13,16 @@ var stroke_m := 0.008
 var depression_m := 0.0
 var _hovered := false
 var _bezel: MeshInstance3D
+var enabled := true:
+	set(value):
+		enabled=value
+		collision_layer=1 if enabled else 0
+		if not enabled:
+			_hovered=false
+			depression_m=0.0
+			if face:face.position.z=0.0
+			if text_label:text_label.position.z=0.014
+		_update_face_color()
 
 func configure(caption: String, command: String, width: float = 0.66, height: float = 0.062, color: Color = Color("244353")) -> void:
 	action=command
@@ -52,20 +62,25 @@ func configure(caption: String, command: String, width: float = 0.66, height: fl
 	text_label.modulate=Color("e8f3f6")
 	text_label.outline_size=0
 	add_child(text_label)
-	collision_layer=1
+	collision_layer=1 if enabled else 0
 	collision_mask=0
+	_update_face_color()
+
+func set_enabled(value: bool) -> void:
+	enabled=value
 
 func set_caption(caption: String) -> void:
 	if text_label: text_label.text=caption
 
 func hover(value: bool) -> void:
-	_hovered=value
+	_hovered=value and enabled
 	_update_face_color()
 
 ## Local +Z is the approach direction. Negative means outside the touch region;
 ## zero means the finger is in the 12 mm approach zone in front of the cap.
 ## Otherwise the value is penetration measured from the cap's REST surface.
 func contact_depth(world_point: Vector3) -> float:
+	if not enabled:return -1.0
 	var point=to_local(world_point)
 	if absf(point.x)>width_m*0.5 or absf(point.y)>height_m*0.5:
 		return -1.0
@@ -77,12 +92,17 @@ func contact_depth(world_point: Vector3) -> float:
 ## The interaction controller supplies the maximum contact depth of both hands
 ## and owns debounce/hysteresis. Mesh and caption share the full physical stroke.
 func set_depression(depth: float) -> void:
-	depression_m=clampf(depth,0.0,stroke_m)
+	depression_m=clampf(depth,0.0,stroke_m) if enabled else 0.0
 	if face:face.position.z=-depression_m
 	if text_label:text_label.position.z=0.014-depression_m
 	_update_face_color()
 
 func _update_face_color() -> void:
 	if not face:return
+	if not enabled:
+		face.material_override.albedo_color=normal_color.lerp(Color("10222d"),0.72)
+		if text_label:text_label.modulate=Color("647d89")
+		return
+	if text_label:text_label.modulate=Color("e8f3f6")
 	var color=hover_color if _hovered else normal_color
 	face.material_override.albedo_color=color.lerp(Color("6ce5c9"),0.28*depression_m/stroke_m)
